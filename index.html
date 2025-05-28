@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resolver $ref en YAML (Estilo Estructural)</title>
+    <title>Resolver $ref en YAML (OP Consultor Avanzado)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
     <style>
@@ -12,7 +12,7 @@
         }
         .content-area { 
             min-height: 200px;
-            max-height: 400px; 
+            max-height: 350px; 
             overflow-y: auto;
             white-space: pre;
             font-family: monospace;
@@ -21,19 +21,16 @@
             border-radius: 0.375rem; 
             padding: 0.75rem; 
         }
-        .content-area::-webkit-scrollbar, #usedFilesListContent::-webkit-scrollbar {
+        .content-area::-webkit-scrollbar, #usedFilesListContent::-webkit-scrollbar, #curlValidationOutput::-webkit-scrollbar, #apiSummaryContent::-webkit-scrollbar {
             width: 8px;
         }
-        .content-area::-webkit-scrollbar-track, #usedFilesListContent::-webkit-scrollbar-track {
+        .content-area::-webkit-scrollbar-track, #usedFilesListContent::-webkit-scrollbar-track, #curlValidationOutput::-webkit-scrollbar-track, #apiSummaryContent::-webkit-scrollbar-track {
             background: #f1f1f1;
             border-radius: 10px;
         }
-        .content-area::-webkit-scrollbar-thumb, #usedFilesListContent::-webkit-scrollbar-thumb {
+        .content-area::-webkit-scrollbar-thumb, #usedFilesListContent::-webkit-scrollbar-thumb, #curlValidationOutput::-webkit-scrollbar-thumb, #apiSummaryContent::-webkit-scrollbar-thumb {
             background: #888;
             border-radius: 10px;
-        }
-        .content-area::-webkit-scrollbar-thumb:hover, #usedFilesListContent::-webkit-scrollbar-thumb:hover {
-            background: #555;
         }
         .message-box {
             padding: 0.75rem 1rem;
@@ -42,144 +39,40 @@
             font-size: 0.875rem;
             border-width: 1px;
         }
-        .message-box-success {
-            background-color: #d1fae5; color: #065f46; border-color: #6ee7b7;
-        }
-        .message-box-error {
-            background-color: #fee2e2; color: #991b1b; border-color: #fca5a5;
-        }
-        .message-box-info {
-            background-color: #e0f2fe; color: #075985; border-color: #7dd3fc;
-        }
-        #usedFilesListContent {
-            max-height: 100px; 
-            overflow-y: auto;
-            border: 1px solid #e5e7eb;
-            border-radius: 0.375rem;
-            background-color: #f9fafb;
-        }
-        #usedFilesListContent li {
-            padding: 0.25rem 0.5rem;
-            font-size: 0.75rem; 
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            font-family: monospace;
-        }
-        #mainFileSelector {
-            max-width: 100%;
-        }
-        .spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            border-left-color: #09f;
-            animation: spin 1s ease infinite;
-            display: inline-block; 
-            margin-right: 8px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        #apiSummaryArea, #usedFilesArea {
-             margin-top: 1.5rem; 
-        }
-        #apiSummaryContent { 
-            white-space: pre-wrap; 
-            font-family: 'Inter', sans-serif; 
-            font-size: 0.875rem; 
-            line-height: 1.6; 
-        }
+        .message-box-success { background-color: #d1fae5; color: #065f46; border-color: #6ee7b7; }
+        .message-box-error { background-color: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+        .message-box-info { background-color: #e0f2fe; color: #075985; border-color: #7dd3fc; }
+        .message-box-warning { background-color: #fef3c7; color: #92400e; border-color: #fcd34d; }
+
+        #usedFilesListContent li { padding: 0.25rem 0.5rem; font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: monospace; }
+        #mainFileSelector, #curlOperationPath, #curlOperationMethod { max-width: 100%; }
+        .spinner { border: 4px solid rgba(0, 0, 0, 0.1); width: 24px; height: 24px; border-radius: 50%; border-left-color: #09f; animation: spin 1s ease infinite; display: inline-block; margin-right: 8px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        /* Styles for interactive resolved view */
-        #resolvedContent details {
-            margin-left: 0; 
-            border-left: 2px solid transparent; 
-        }
-        #resolvedContent summary {
-            cursor: pointer;
-            padding: 2px 0;
-            outline: none;
-            display: block; 
-            white-space: pre;
-        }
-        #resolvedContent summary::-webkit-details-marker {
-            display: inline-block; 
-            margin-right: 0.3em;
-        }
-        .resolved-content-block { /* Container for content inside <details> */
-            padding-left: 1.5em; 
-            border-radius: 3px; 
-            padding-top: 0.25em;
-            padding-bottom: 0.25em;
-        }
-        .resolved-yaml-line {
-            padding: 1px 0; 
-            display: block; 
-            white-space: pre; 
-        }
-        .source-annotation-line {
-            color: #4b5563; 
-            font-size: 0.8em;
-            font-style: italic;
-            display: block;
-            white-space: pre;
-            padding: 1px 0;
-             margin-top: 2px;
-             margin-bottom: 2px;
-        }
-        .ref-original-line { 
-            color: #1d4ed8; 
-            font-weight: 500;
-        }
-
-        /* Cyclical Background Colors for $ref content blocks */
-        .bg-cycle-0 { background-color: #eff6ff; } /* blue-50 */
-        .bg-cycle-1 { background-color: #f0fdf4; } /* green-50 */
-        .bg-cycle-2 { background-color: #fef9c3; } /* yellow-100 */
-        .bg-cycle-3 { background-color: #fce7f3; } /* pink-100 */
-        .bg-cycle-4 { background-color: #f5f3ff; } /* purple-50 */
-        .bg-cycle-5 { background-color: #fff7ed; } /* orange-50 */
-        .bg-cycle-6 { background-color: #ecfeff; } /* cyan-50 */
-        .bg-cycle-7 { background-color: #f7fee7; } /* lime-50 */
-        .bg-cycle-8 { background-color: #eef2ff; } /* indigo-50 */
-
-        /* Structural OpenAPI styling */
-        .openapi-section-title-key .key-text {
-            font-weight: 600;
-            color: #1f2937; /* gray-800 */
-        }
-        .openapi-section-title-key {
-            margin-top: 1em;
-            padding-top: 0.75em;
-            border-top: 1px dashed #d1d5db; /* gray-300 */
-        }
-        .openapi-section-title-key:first-child { /* No top border for the very first section */
-            margin-top: 0;
-            padding-top: 0;
-            border-top: none;
-        }
-        .openapi-path-key .key-text {
-            font-weight: 600;
-            color: #1e40af; /* blue-800 */
-        }
-        .openapi-path-key {
-             margin-top: 0.5em;
-        }
-        .openapi-method-key .key-text {
-            font-weight: 700; /* bolder for methods */
-        }
-        .method-get .key-text { color: #059669; } /* green-600 */
-        .method-post .key-text { color: #2563eb; } /* blue-600 */
-        .method-put .key-text { color: #d97706; } /* amber-600 */
-        .method-delete .key-text { color: #dc2626; } /* red-600 */
-        .method-patch .key-text { color: #9333ea; } /* purple-600 */
-        .method-options .key-text { color: #52525b; } /* zinc-600 */
-        .method-head .key-text { color: #52525b; } /* zinc-600 */
-        .method-trace .key-text { color: #52525b; } /* zinc-600 */
-
+        #opConsultorSection { border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1rem; margin-top: 1.5rem; }
+        .op-consultor-tab-content { margin-top: 1rem; border-top: 1px solid #e5e7eb; padding-top: 1rem; }
+        
+        .resolved-yaml-line { padding: 1px 0; display: block; white-space: pre; }
+        .source-annotation-line { color: #6b7280; font-size: 0.8em; font-style: italic; display: block; white-space: pre; padding: 1px 0; margin-top: 2px; margin-bottom: 2px; }
+        .ref-original-line { color: #1d4ed8; font-weight: 500; }
+        .bg-cycle-0 { background-color: #eff6ff; } .bg-cycle-1 { background-color: #f0fdf4; } .bg-cycle-2 { background-color: #fef9c3; } .bg-cycle-3 { background-color: #fce7f3; } .bg-cycle-4 { background-color: #f5f3ff; } .bg-cycle-5 { background-color: #fff7ed; } .bg-cycle-6 { background-color: #ecfeff; } .bg-cycle-7 { background-color: #f7fee7; } .bg-cycle-8 { background-color: #eef2ff; }
+        .openapi-section-title-key .key-text { font-weight: 600; color: #1f2937; }
+        .openapi-section-title-key { margin-top: 1em; padding-top: 0.75em; border-top: 1px dashed #d1d5db; }
+        .openapi-section-title-key:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+        .openapi-path-key .key-text { font-weight: 600; color: #1e40af; }
+        .openapi-path-key { margin-top: 0.5em; }
+        .openapi-method-key .key-text { font-weight: 700; }
+        .method-get .key-text { color: #059669; } .method-post .key-text { color: #2563eb; } .method-put .key-text { color: #d97706; } .method-delete .key-text { color: #dc2626; } .method-patch .key-text { color: #9333ea; } .method-options .key-text { color: #52525b; } .method-head .key-text { color: #52525b; } .method-trace .key-text { color: #52525b; } 
+        
+        /* Confirmation Modal Styles */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background-color: white; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; max-width: 90%; width: 400px;}
+        .modal-content p { margin-bottom: 1.5rem; font-size: 0.9rem; color: #4b5563; }
+        .modal-buttons button { padding: 0.5rem 1rem; margin: 0 0.5rem; border-radius: 0.375rem; font-weight: 500; cursor: pointer; transition: background-color 0.2s; }
+        .modal-confirm-button { background-color: #2563eb; color: white; }
+        .modal-confirm-button:hover { background-color: #1d4ed8; }
+        .modal-cancel-button { background-color: #e5e7eb; color: #374151; }
+        .modal-cancel-button:hover { background-color: #d1d5db; }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-4">
@@ -202,23 +95,14 @@
                 </select>
             </div>
         </div>
-         <div class="mb-4">
+         <div class="mb-6">
             <label for="geminiApiKeyInput" class="block mb-2 text-sm font-medium text-gray-700">3. Ingresa tu API Key para OP Consultor:</label>
             <input type="password" id="geminiApiKeyInput" placeholder="Pega tu API Key aquí" class="block w-full p-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
-        </div>
-        
-        <div class="mb-4 hidden" id="loadedFilesSection">
-            <h3 class="text-sm font-medium text-gray-700 mb-1">Archivos YAML Cargados en Total:</h3>
-            <ul id="loadedFilesList" class="bg-gray-50 p-2"></ul>
         </div>
         
         <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mb-6">
             <button id="processButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto">
                 Resolver $refs
-            </button>
-            <button id="generateSummaryButton" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto flex items-center justify-center">
-                <span id="summaryButtonSpinner" class="spinner hidden mr-2"></span>
-                ✨ Consultar a OP Consultor
             </button>
             <button id="downloadButton" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto">
                 Descargar YAML Resuelto
@@ -237,15 +121,67 @@
             <pre id="originalContent" class="content-area text-xs"></pre>
         </div>
         
+        <div id="opConsultorSection">
+            <h2 class="text-xl font-semibold text-gray-800 mb-3 text-center">OP Consultor (Asistente IA)</h2>
+            <div class="flex justify-center gap-4 mb-4">
+                <button id="showApiSummaryTabButton" class="bg-indigo-500 hover:bg-indigo-600 text-white font-medium py-2 px-4 rounded-lg">Resumen de API</button>
+                <button id="showCurlValidatorTabButton" class="bg-teal-500 hover:bg-teal-600 text-white font-medium py-2 px-4 rounded-lg">Validar cURL</button>
+            </div>
+
+            <div id="apiSummaryTab" class="op-consultor-tab-content hidden">
+                <h3 class="text-lg font-semibold text-gray-700 mb-2">Generar Resumen de API</h3>
+                <button id="generateSummaryButton" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed w-full flex items-center justify-center mb-3">
+                    <span id="summaryButtonSpinner" class="spinner hidden mr-2"></span>
+                    ✨ Obtener Resumen de OP Consultor
+                </button>
+                <div id="apiSummaryArea" class="hidden">
+                    <h4 class="text-md font-semibold text-gray-700 mb-1">Resumen (Generado por OP Consultor):</h4>
+                    <div id="apiSummaryContent" class="content-area text-sm"></div>
+                </div>
+            </div>
+
+            <div id="curlValidatorTab" class="op-consultor-tab-content hidden">
+                <h3 class="text-lg font-semibold text-gray-700 mb-2">Validar Comando cURL</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
+                    <div>
+                        <label for="curlOperationPath" class="block text-sm font-medium text-gray-700 mb-1">Seleccionar Path:</label>
+                        <select id="curlOperationPath" class="block w-full p-2 text-sm border border-gray-300 rounded-lg bg-gray-50" disabled></select>
+                    </div>
+                    <div>
+                        <label for="curlOperationMethod" class="block text-sm font-medium text-gray-700 mb-1">Seleccionar Método:</label>
+                        <select id="curlOperationMethod" class="block w-full p-2 text-sm border border-gray-300 rounded-lg bg-gray-50" disabled></select>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="curlCommandInput" class="block text-sm font-medium text-gray-700 mb-1">Comando cURL a Validar:</label>
+                    <textarea id="curlCommandInput" rows="4" class="block w-full p-2 text-sm border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500" placeholder="Pega tu comando cURL aquí..."></textarea>
+                </div>
+                <button id="validateCurlButton" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed w-full flex items-center justify-center">
+                    <span id="curlValidatorSpinner" class="spinner hidden mr-2"></span>
+                    Validar cURL con OP Consultor
+                </button>
+                <div id="curlValidationResultArea" class="mt-4 hidden">
+                    <h4 class="text-md font-semibold text-gray-700 mb-1">Resultado de Validación:</h4>
+                    <div id="curlValidationOutput" class="content-area text-sm p-3 bg-gray-50 rounded-md border"></div>
+                </div>
+            </div>
+        </div>
+        
         <div id="usedFilesArea" class="mt-6 hidden">
             <h2 class="text-lg font-semibold text-gray-700 mb-2">Archivos Utilizados en la Resolución:</h2>
             <ul id="usedFilesListContent" class="p-2 text-sm"></ul>
         </div>
-
-        <div id="apiSummaryArea" class="mt-6 hidden">
-            <h2 class="text-lg font-semibold text-gray-700 mb-2">Resumen de la API (Generado por OP Consultor)</h2>
-            <div id="apiSummaryContent" class="content-area text-sm"></div>
+        
+        <div id="confirmationModal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <p id="confirmationMessage"></p>
+                <div class="modal-buttons">
+                    <button id="confirmActionButton" class="modal-confirm-button">Continuar</button>
+                    <button id="cancelActionButton" class="modal-cancel-button">Cancelar</button>
+                </div>
+            </div>
         </div>
+
 
         <footer class="mt-8 text-center text-xs text-gray-500">
             <p>Utilizando js-yaml y OP Consultor. La selección de carpetas funciona mejor en navegadores basados en Chromium.</p>
@@ -253,22 +189,7 @@
     </div>
 
     <script>
-        const yamlDirectoryInput = document.getElementById('yamlDirectory');
-        const mainFileSelector = document.getElementById('mainFileSelector');
-        const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
-        const processButton = document.getElementById('processButton');
-        const generateSummaryButton = document.getElementById('generateSummaryButton');
-        const downloadButton = document.getElementById('downloadButton');
-        const summaryButtonSpinner = document.getElementById('summaryButtonSpinner');
-        const originalContentArea = document.getElementById('originalContentArea'); 
-        const originalContentDiv = document.getElementById('originalContent'); 
-        const resolvedContentDiv = document.getElementById('resolvedContent');
-        const messageArea = document.getElementById('messageArea');
-        const apiSummaryArea = document.getElementById('apiSummaryArea');
-        const apiSummaryContent = document.getElementById('apiSummaryContent');
-        const usedFilesArea = document.getElementById('usedFilesArea');
-        const usedFilesListContent = document.getElementById('usedFilesListContent');
-
+        // Global State (can be defined outside DOMContentLoaded if not immediately using DOM elements)
         let loadedFilesData = {}; 
         let mainFileName = null;    
         const TARGET_REFERENCE_FOLDER_NAME = 'reference'; 
@@ -276,662 +197,802 @@
         let filesUsedInResolution = new Set();
         const YAML_REF_ORIGIN_MARKER = '__yaml_ref_origin__';
         const RESOLVED_REF_MARKER = '__is_resolved_ref__'; 
+        let currentConfirmAction = null;
 
-        const blockColorClasses = [
-            'bg-cycle-0', 'bg-cycle-1', 'bg-cycle-2', 'bg-cycle-3', 'bg-cycle-4', 
-            'bg-cycle-5', 'bg-cycle-6', 'bg-cycle-7', 'bg-cycle-8'
-        ];
+
+        const blockColorClasses = ['bg-cycle-0', 'bg-cycle-1', 'bg-cycle-2', 'bg-cycle-3', 'bg-cycle-4', 'bg-cycle-5', 'bg-cycle-6', 'bg-cycle-7', 'bg-cycle-8'];
         const httpMethods = ["get", "post", "put", "delete", "patch", "options", "head", "trace"];
         const openApiTopLevelKeys = ["openapi", "info", "servers", "paths", "components", "security", "tags", "externalDocs"];
 
-
+        // --- Utility Functions (can be defined outside DOMContentLoaded) ---
         function escapeHtml(unsafe) {
-            if (typeof unsafe !== 'string') {
-                unsafe = String(unsafe);
+            if (typeof unsafe !== 'string') unsafe = String(unsafe);
+            return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        // --- DOMContentLoaded to ensure all elements are available ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM Elements
+            const yamlDirectoryInput = document.getElementById('yamlDirectory');
+            const mainFileSelector = document.getElementById('mainFileSelector');
+            const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
+            const processButton = document.getElementById('processButton');
+            const downloadButton = document.getElementById('downloadButton');
+            
+            const originalContentDiv = document.getElementById('originalContent'); 
+            const resolvedContentDiv = document.getElementById('resolvedContent');
+            const messageArea = document.getElementById('messageArea');
+            
+            const usedFilesArea = document.getElementById('usedFilesArea');
+            const usedFilesListContent = document.getElementById('usedFilesListContent');
+
+            const showApiSummaryTabButton = document.getElementById('showApiSummaryTabButton');
+            const showCurlValidatorTabButton = document.getElementById('showCurlValidatorTabButton');
+            const apiSummaryTab = document.getElementById('apiSummaryTab');
+            const curlValidatorTab = document.getElementById('curlValidatorTab');
+            
+            const generateSummaryButton = document.getElementById('generateSummaryButton');
+            const summaryButtonSpinner = document.getElementById('summaryButtonSpinner');
+            const apiSummaryArea = document.getElementById('apiSummaryArea');
+            const apiSummaryContent = document.getElementById('apiSummaryContent');
+
+            const curlOperationPath = document.getElementById('curlOperationPath');
+            const curlOperationMethod = document.getElementById('curlOperationMethod');
+            const curlCommandInput = document.getElementById('curlCommandInput');
+            const validateCurlButton = document.getElementById('validateCurlButton');
+            const curlValidatorSpinner = document.getElementById('curlValidatorSpinner');
+            const curlValidationResultArea = document.getElementById('curlValidationResultArea');
+            const curlValidationOutput = document.getElementById('curlValidationOutput');
+
+            const confirmationModal = document.getElementById('confirmationModal');
+            const confirmationMessage = document.getElementById('confirmationMessage');
+            const confirmActionButton = document.getElementById('confirmActionButton');
+            const cancelActionButton = document.getElementById('cancelActionButton');
+
+            // --- UI Interaction Functions ---
+            function showMessage(type, text) {
+                messageArea.innerHTML = ''; 
+                const box = document.createElement('div');
+                box.className = `message-box message-box-${type}`;
+                box.textContent = text;
+                messageArea.appendChild(box);
             }
-            return unsafe
-                 .replace(/&/g, "&amp;")
-                 .replace(/</g, "&lt;")
-                 .replace(/>/g, "&gt;")
-                 .replace(/"/g, "&quot;")
-                 .replace(/'/g, "&#039;");
-        }
+            function clearMessages() { messageArea.innerHTML = ''; }
 
-        function showMessage(type, text) {
-            messageArea.innerHTML = ''; 
-            const messageBox = document.createElement('div');
-            messageBox.className = `message-box message-box-${type}`;
-            messageBox.textContent = text;
-            messageArea.appendChild(messageBox);
-        }
+            function showConfirmationModal(message, onConfirm) {
+                confirmationMessage.textContent = message;
+                currentConfirmAction = onConfirm;
+                confirmationModal.classList.remove('hidden');
+            }
+            confirmActionButton.addEventListener('click', () => {
+                if (currentConfirmAction) currentConfirmAction();
+                confirmationModal.classList.add('hidden');
+                currentConfirmAction = null;
+            });
+            cancelActionButton.addEventListener('click', () => {
+                confirmationModal.classList.add('hidden');
+                currentConfirmAction = null;
+                generateSummaryButton.disabled = !currentResolvedObject;
+                validateCurlButton.disabled = !currentResolvedObject || !curlOperationPath.value || !curlOperationMethod.value;
+                summaryButtonSpinner.classList.add('hidden');
+                curlValidatorSpinner.classList.add('hidden');
+            });
 
-        function clearMessages() {
-            messageArea.innerHTML = '';
-        }
-        
-        function populateMainFileSelector() {
-            mainFileSelector.innerHTML = ''; 
-            const referenceFiles = [];
+            function initializeUIState() {
+                generateSummaryButton.disabled = true; 
+                downloadButton.disabled = true;
+                validateCurlButton.disabled = true;
+                curlOperationPath.disabled = true;
+                curlOperationMethod.disabled = true;
 
-            for (const filePath in loadedFilesData) {
-                const pathSegments = filePath.split('/');
-                if (pathSegments.slice(0, -1).includes(TARGET_REFERENCE_FOLDER_NAME)) {
-                    referenceFiles.push(filePath);
+                apiSummaryTab.classList.add('hidden');
+                curlValidatorTab.classList.add('hidden');
+                apiSummaryArea.classList.add('hidden');
+                curlValidationResultArea.classList.add('hidden');
+                usedFilesArea.classList.add('hidden');
+                
+                apiSummaryContent.textContent = '';
+                usedFilesListContent.innerHTML = '';
+                curlValidationOutput.innerHTML = '';
+                curlCommandInput.value = '';
+            }
+
+            showApiSummaryTabButton.addEventListener('click', () => {
+                apiSummaryTab.classList.remove('hidden');
+                curlValidatorTab.classList.add('hidden');
+                showApiSummaryTabButton.classList.add('bg-indigo-700', 'ring-2', 'ring-indigo-300');
+                showCurlValidatorTabButton.classList.remove('bg-teal-700', 'ring-2', 'ring-teal-300');
+            });
+
+            showCurlValidatorTabButton.addEventListener('click', () => {
+                curlValidatorTab.classList.remove('hidden');
+                apiSummaryTab.classList.add('hidden');
+                showCurlValidatorTabButton.classList.add('bg-teal-700', 'ring-2', 'ring-teal-300');
+                showApiSummaryTabButton.classList.remove('bg-indigo-700', 'ring-2', 'ring-indigo-300');
+                if (currentResolvedObject) populateCurlOperationSelectors();
+            });
+            
+            function populateMainFileSelector() {
+                mainFileSelector.innerHTML = ''; 
+                const referenceFiles = [];
+                for (const filePath in loadedFilesData) {
+                    if (filePath.split('/').slice(0, -1).includes(TARGET_REFERENCE_FOLDER_NAME)) {
+                        referenceFiles.push(filePath);
+                    }
                 }
-            }
-            referenceFiles.sort();
+                referenceFiles.sort();
+                initializeUIState(); 
 
-            generateSummaryButton.disabled = true; 
-            downloadButton.disabled = true;
-            apiSummaryArea.classList.add('hidden');
-            apiSummaryContent.textContent = '';
-            usedFilesArea.classList.add('hidden');
-            usedFilesListContent.innerHTML = '';
-            currentResolvedObject = null;
-
-            if (referenceFiles.length > 0) {
-                referenceFiles.forEach(filePath => {
+                if (referenceFiles.length > 0) {
+                    referenceFiles.forEach(filePath => {
+                        const option = document.createElement('option');
+                        option.value = filePath; option.textContent = filePath; 
+                        mainFileSelector.appendChild(option);
+                    });
+                    mainFileSelector.disabled = false;
+                    mainFileName = referenceFiles[0];
+                    mainFileSelector.value = mainFileName;
+                    if (originalContentDiv) originalContentDiv.textContent = loadedFilesData[mainFileName]?.raw || ''; // Guard check
+                    processButton.disabled = false;
+                    showMessage('success', `Archivos YAML cargados. Selecciona un archivo de la carpeta "${TARGET_REFERENCE_FOLDER_NAME}" para procesar.`);
+                } else {
                     const option = document.createElement('option');
-                    option.value = filePath;
-                    option.textContent = filePath; 
+                    option.value = ""; option.textContent = `-- No se encontraron archivos YAML en ninguna carpeta "${TARGET_REFERENCE_FOLDER_NAME}" --`;
                     mainFileSelector.appendChild(option);
-                });
-                mainFileSelector.disabled = false;
-                mainFileName = referenceFiles[0];
-                mainFileSelector.value = mainFileName;
-                originalContentDiv.textContent = loadedFilesData[mainFileName]?.raw || '';
-                processButton.disabled = false;
-                showMessage('success', `Archivos YAML cargados. Selecciona un archivo de una carpeta "${TARGET_REFERENCE_FOLDER_NAME}" para procesar.`);
-            } else {
-                const option = document.createElement('option');
-                option.value = "";
-                option.textContent = `-- No se encontraron archivos YAML en ninguna carpeta "${TARGET_REFERENCE_FOLDER_NAME}" --`;
-                mainFileSelector.appendChild(option);
+                    mainFileSelector.disabled = true; mainFileName = null;
+                    if (originalContentDiv) originalContentDiv.textContent = ''; // Guard check
+                    processButton.disabled = true;
+                    if (Object.keys(loadedFilesData).length > 0) { 
+                         showMessage('info', `Se cargaron archivos YAML, pero ninguno en una carpeta "${TARGET_REFERENCE_FOLDER_NAME}".`);
+                    } else { 
+                         showMessage('info', `No se cargaron archivos YAML. Primero selecciona una carpeta.`);
+                    }
+                }
+            }
+
+            yamlDirectoryInput.addEventListener('change', async (event) => {
+                const files = event.target.files;
+                loadedFilesData = {}; mainFileName = null; currentResolvedObject = null;
+                if (originalContentDiv) originalContentDiv.textContent = ''; 
+                if (resolvedContentDiv) resolvedContentDiv.innerHTML = ''; 
+                mainFileSelector.innerHTML = '<option value="">-- Primero carga una carpeta --</option>';
                 mainFileSelector.disabled = true;
-                mainFileName = null;
-                originalContentDiv.textContent = '';
-                processButton.disabled = true;
-                if (Object.keys(loadedFilesData).length > 0) { 
-                     showMessage('info', `Se cargaron archivos YAML, pero ninguno en una carpeta "${TARGET_REFERENCE_FOLDER_NAME}". No se puede seleccionar un archivo principal.`);
-                } else { 
-                     showMessage('info', `No se cargaron archivos YAML. Primero selecciona una carpeta.`);
+                clearMessages(); initializeUIState();
+
+                if (!files || files.length === 0) return;
+
+                let errors = []; let yamlFileCount = 0;
+                for (const file of files) {
+                    const filePath = file.webkitRelativePath; 
+                    if (!filePath.toLowerCase().endsWith('.yaml') && !filePath.toLowerCase().endsWith('.yml')) continue; 
+                    yamlFileCount++;
+                    try {
+                        const fileContent = await file.text(); // Await file reading
+                        loadedFilesData[filePath] = { raw: fileContent, parsed: jsyaml.load(fileContent) };
+                    } catch (e) { errors.push(`Error al parsear "${filePath}": ${e.message}`); }
                 }
-            }
-        }
+                if (errors.length > 0) showMessage('error', `Algunos archivos YAML no pudieron ser parseados: \n${errors.join('\n')}`);
+                if (yamlFileCount === 0) showMessage('info', 'No se encontraron archivos .yaml o .yml en la carpeta seleccionada.');
+                populateMainFileSelector(); 
+            });
 
-        yamlDirectoryInput.addEventListener('change', async (event) => {
-            const files = event.target.files;
-            loadedFilesData = {};
-            mainFileName = null;
-            originalContentDiv.textContent = '';
-            resolvedContentDiv.innerHTML = ''; 
-            currentResolvedObject = null;
-            processButton.disabled = true;
-            generateSummaryButton.disabled = true;
-            downloadButton.disabled = true;
-            apiSummaryArea.classList.add('hidden');
-            apiSummaryContent.textContent = '';
-            usedFilesArea.classList.add('hidden');
-            usedFilesListContent.innerHTML = '';
-            mainFileSelector.innerHTML = '<option value="">-- Primero carga una carpeta --</option>';
-            mainFileSelector.disabled = true;
-            clearMessages();
-
-            if (!files || files.length === 0) {
-                const noFilesMessageElement = document.getElementById('noFilesMessage');
-                // This element is inside the hidden loadedFilesSection, so this message won't be visible.
-                // Consider adding a general message if needed.
-                return;
-            }
-
-            let errors = [];
-            let yamlFileCount = 0;
-
-            for (const file of files) {
-                const filePath = file.webkitRelativePath; 
-                if (!filePath.toLowerCase().endsWith('.yaml') && !filePath.toLowerCase().endsWith('.yml')) {
-                    continue; 
-                }
-                yamlFileCount++;
-                try {
-                    const fileContent = await file.text();
-                    const parsedContent = jsyaml.load(fileContent);
-                    loadedFilesData[filePath] = { raw: fileContent, parsed: parsedContent };
-                } catch (yamlError) {
-                    errors.push(`Error al parsear "${filePath}": ${yamlError.message}`);
-                }
-            }
-            
-            if (errors.length > 0) {
-                showMessage('error', `Algunos archivos YAML no pudieron ser parseados: \n${errors.join('\n')}`);
-            }
-            
-            if (yamlFileCount === 0 && Object.keys(loadedFilesData).length === 0) {
-                 showMessage('info', 'No se encontraron archivos .yaml o .yml en la carpeta seleccionada.');
-            }
-            populateMainFileSelector(); 
-        });
-
-        mainFileSelector.addEventListener('change', (event) => {
-            mainFileName = event.target.value;
-            currentResolvedObject = null;
-            generateSummaryButton.disabled = true;
-            downloadButton.disabled = true;
-            apiSummaryArea.classList.add('hidden');
-            apiSummaryContent.textContent = '';
-            usedFilesArea.classList.add('hidden');
-            usedFilesListContent.innerHTML = '';
-            if (mainFileName && loadedFilesData[mainFileName]) {
-                originalContentDiv.textContent = loadedFilesData[mainFileName].raw;
-                processButton.disabled = false;
-                clearMessages(); 
-                resolvedContentDiv.innerHTML = ''; 
-            } else {
-                originalContentDiv.textContent = '';
-                processButton.disabled = true;
-                mainFileName = null; 
-            }
-        });
-
-        function normalizePath(baseDir, relativePath) {
-            const baseParts = baseDir.split('/').filter(p => p.length > 0);
-            const relativeParts = relativePath.split('/');
-            let pathStack = [...baseParts];
-            for (const part of relativeParts) {
-                if (part === '..') {
-                    if (pathStack.length > 0) pathStack.pop();
-                    else throw new Error(`Referencia inválida: "${relativePath}" intenta navegar por encima de la carpeta raíz desde "${baseDir}".`);
-                } else if (part !== '.' && part !== '') {
-                    pathStack.push(part);
-                }
-            }
-            return pathStack.join('/');
-        }
-
-        function getPath(obj, pointer) {
-            const effectivePointer = pointer.startsWith('#/') ? pointer.substring(2) : (pointer.startsWith('/') ? pointer.substring(1) : pointer);
-            if (effectivePointer === '') return obj;
-            const parts = effectivePointer.split('/');
-            let current = obj;
-            for (const part of parts) {
-                const decodedPart = decodeURIComponent(part.replace(/~1/g, '/').replace(/~0/g, '~'));
-                if (current && typeof current === 'object' && decodedPart in current) {
-                    current = current[decodedPart];
+            mainFileSelector.addEventListener('change', (event) => {
+                mainFileName = event.target.value;
+                currentResolvedObject = null; 
+                if (resolvedContentDiv) resolvedContentDiv.innerHTML = '';
+                initializeUIState(); 
+                if (mainFileName && loadedFilesData[mainFileName]) {
+                    if (originalContentDiv) originalContentDiv.textContent = loadedFilesData[mainFileName].raw;
+                    processButton.disabled = false; clearMessages(); 
                 } else {
-                    throw new Error(`Ruta de referencia no encontrada: "${pointer}". Parte fallida: "${decodedPart}" en el objeto.`);
+                    if (originalContentDiv) originalContentDiv.textContent = ''; 
+                    processButton.disabled = true; mainFileName = null; 
                 }
+            });
+
+            // --- $ref Resolution and Display Logic ---
+            function normalizePath(baseDir, relativePath) { 
+                const baseParts = baseDir.split('/').filter(p => p.length > 0);
+                const relativeParts = relativePath.split('/');
+                let pathStack = [...baseParts];
+                for (const part of relativeParts) {
+                    if (part === '..') {
+                        if (pathStack.length > 0) pathStack.pop();
+                        else throw new Error(`Referencia inválida: "${relativePath}" intenta navegar por encima de la carpeta raíz desde "${baseDir}".`);
+                    } else if (part !== '.' && part !== '') {
+                        pathStack.push(part);
+                    }
+                }
+                return pathStack.join('/');
             }
-            return current;
-        }
-        
-        function parseRefString(refString) {
-            const hashIndex = refString.indexOf('#');
-            if (hashIndex === -1) return { filePath: refString, pointer: '#/' };
-            if (hashIndex === 0) return { filePath: null, pointer: refString };
-            return { filePath: refString.substring(0, hashIndex), pointer: refString.substring(hashIndex) };
-        }
-
-        function resolveReferences(currentValue, currentFileFullPath, allFilesData, visitedRefs, usedFilesSet, originalRefPathForNode = null) {
-            if (typeof currentValue !== 'object' || currentValue === null) {
-                return currentValue;
-            }
-            
-            if (currentFileFullPath && !visitedRefs.has(currentFileFullPath + '#INTERNAL_VISIT_MARKER_YAML_RESOLVER')) { 
-                 usedFilesSet.add(currentFileFullPath);
-                 visitedRefs.add(currentFileFullPath + '#INTERNAL_VISIT_MARKER_YAML_RESOLVER'); 
-            }
-
-            if (Array.isArray(currentValue)) {
-                return currentValue.map(item => resolveReferences(item, currentFileFullPath, allFilesData, new Set(visitedRefs), usedFilesSet));
-            }
-
-            if (currentValue.hasOwnProperty('$ref')) {
-                const refString = currentValue.$ref;
-                if (typeof refString !== 'string') {
-                    throw new Error(`Valor de $ref inválido: ${refString}. Debe ser un string.`);
-                }
-
-                const { filePath: refFilePathPart, pointer: refPointer } = parseRefString(refString);
-                let targetFileFullPath;
-                let targetDocumentParsed;
-
-                if (refFilePathPart === null) { 
-                    targetFileFullPath = currentFileFullPath;
-                } else { 
-                    const currentFileDir = currentFileFullPath.includes('/') ? currentFileFullPath.substring(0, currentFileFullPath.lastIndexOf('/') + 1) : "";
-                    targetFileFullPath = normalizePath(currentFileDir, refFilePathPart);
-                }
-                
-                targetDocumentParsed = allFilesData[targetFileFullPath]?.parsed;
-                if (!targetDocumentParsed) {
-                    throw new Error(`Archivo referenciado no cargado o no encontrado: "${targetFileFullPath}" (desde $ref: "${refString}" en archivo "${currentFileFullPath}").`);
-                }
-                
-                usedFilesSet.add(targetFileFullPath); 
-
-                const fullRefIdentifier = targetFileFullPath + refPointer;
-                if (visitedRefs.has(fullRefIdentifier)) {
-                    throw new Error(`Referencia circular detectada para: "${fullRefIdentifier}"`);
-                }
-                visitedRefs.add(fullRefIdentifier);
-
-                let resolvedPart;
-                try {
-                    resolvedPart = getPath(targetDocumentParsed, refPointer); 
-                } catch (e) {
-                    throw new Error(`Error al resolver el puntero "${refPointer}" en el archivo "${targetFileFullPath}": ${e.message}`);
-                }
-                
-                let clonedResolvedPart = JSON.parse(JSON.stringify(resolvedPart));
-                
-                const fullyResolvedContent = resolveReferences(clonedResolvedPart, targetFileFullPath, allFilesData, new Set(visitedRefs), usedFilesSet, refString);
-
-                const refWrapper = {};
-                Object.defineProperty(refWrapper, RESOLVED_REF_MARKER, { value: true, enumerable: false, configurable: true, writable: false });
-                Object.defineProperty(refWrapper, 'originalRefString', { value: refString, enumerable: false, configurable: true, writable: false });
-                Object.defineProperty(refWrapper, 'resolvedContent', { value: fullyResolvedContent, enumerable: false, configurable: true, writable: false });
-                if (refFilePathPart !== null) { 
-                     Object.defineProperty(refWrapper, 'sourceFile', { value: targetFileFullPath, enumerable: false, configurable: true, writable: false });
-                }
-                // Also add YAML_REF_ORIGIN_MARKER to the wrapper if it's an external source, for consistency if this wrapper is directly rendered
-                if (targetFileFullPath !== currentFileFullPath && targetFileFullPath !== mainFileName){
-                     Object.defineProperty(refWrapper, YAML_REF_ORIGIN_MARKER, { value: targetFileFullPath, enumerable: false, configurable: true, writable: true });
-                }
-                return refWrapper;
-            }
-
-            const newObj = {};
-            let isExternalBlock = false;
-            // If the node itself came from an external $ref, its currentFileFullPath would be that external file.
-            if (currentFileFullPath !== mainFileName) {
-                isExternalBlock = true;
-            }
-
-            for (const key in currentValue) {
-                if (Object.prototype.hasOwnProperty.call(currentValue, key)) { 
-                    if (key === YAML_REF_ORIGIN_MARKER || key === RESOLVED_REF_MARKER) continue;
-                    newObj[key] = resolveReferences(currentValue[key], currentFileFullPath, allFilesData, new Set(visitedRefs), usedFilesSet);
-                }
-            }
-            
-            const existingOrigin = Object.getOwnPropertyDescriptor(currentValue, YAML_REF_ORIGIN_MARKER)?.value;
-            if (existingOrigin) { // Propagate if already exists (likely from a $ref resolution higher up)
-                 Object.defineProperty(newObj, YAML_REF_ORIGIN_MARKER, {
-                    value: existingOrigin, writable: true, enumerable: false, configurable: true });
-            } else if (isExternalBlock) { // If this object is the direct content of an external file (not mainFile)
-                 Object.defineProperty(newObj, YAML_REF_ORIGIN_MARKER, {
-                    value: currentFileFullPath, writable: true, enumerable: false, configurable: true });
-            }
-            return newObj;
-        }
-        
-
-        function displayInteractiveResolvedYaml(dataToDisplay, parentElement, indentLevel = 0, inheritedSource = null, refDepth = 0, parentKey = null) {
-            const indentSpaces = '  '.repeat(indentLevel);
-
-            if (typeof dataToDisplay === 'object' && dataToDisplay !== null && Object.getOwnPropertyDescriptor(dataToDisplay, RESOLVED_REF_MARKER)?.value) {
-                const originalRef = Object.getOwnPropertyDescriptor(dataToDisplay, 'originalRefString').value;
-                const resolvedContent = Object.getOwnPropertyDescriptor(dataToDisplay, 'resolvedContent').value;
-                const sourceFile = Object.getOwnPropertyDescriptor(dataToDisplay, 'sourceFile')?.value; 
-
-                const details = document.createElement('details');
-                details.style.paddingLeft = `${indentLevel * 1.5}em`;
-                
-                const summary = document.createElement('summary');
-                summary.className = 'ref-original-line';
-                // Try to include the parent key in the summary for context
-                let summaryText = parentKey ? `${escapeHtml(parentKey)}: ` : '';
-                summaryText += `$ref: "${escapeHtml(originalRef)}"`;
-                summary.textContent = summaryText; 
-                details.appendChild(summary);
-
-                const contentBlock = document.createElement('div');
-                contentBlock.className = 'resolved-content-block';
-                contentBlock.classList.add(blockColorClasses[refDepth % blockColorClasses.length]);
-
-                if (sourceFile && sourceFile !== mainFileName) {
-                    const annotationDiv = document.createElement('div');
-                    annotationDiv.className = 'source-annotation-line';
-                    annotationDiv.textContent = `${'  '.repeat(1)}# Origen: ${escapeHtml(sourceFile)}`;
-                    contentBlock.appendChild(annotationDiv);
-                }
-                
-                displayInteractiveResolvedYaml(resolvedContent, contentBlock, 0, sourceFile || inheritedSource, refDepth + 1, null); 
-                details.appendChild(contentBlock);
-                parentElement.appendChild(details);
-
-            } else if (Array.isArray(dataToDisplay)) {
-                if (dataToDisplay.length === 0) {
-                    const lineDiv = document.createElement('div');
-                    lineDiv.className = 'resolved-yaml-line';
-                    lineDiv.style.paddingLeft = `${indentLevel * 1.5}em`;
-                    lineDiv.textContent = `[]`;
-                    parentElement.appendChild(lineDiv);
-                } else {
-                    dataToDisplay.forEach(item => {
-                        const itemSource = (typeof item === 'object' && item !== null) ? Object.getOwnPropertyDescriptor(item, YAML_REF_ORIGIN_MARKER)?.value : null;
-                        const effectiveItemSource = itemSource || inheritedSource;
-
-                        // Check if item itself is a resolved ref
-                        if (typeof item === 'object' && item !== null && Object.getOwnPropertyDescriptor(item, RESOLVED_REF_MARKER)?.value) {
-                            const itemWrapperDiv = document.createElement('div'); 
-                            itemWrapperDiv.style.paddingLeft = `${indentLevel * 1.5}em`;
-                            itemWrapperDiv.className = 'resolved-yaml-line'; // For consistent line styling
-                            itemWrapperDiv.textContent = `- `; 
-                            parentElement.appendChild(itemWrapperDiv);
-                            // The details for the $ref will be appended by the recursive call to the itemWrapperDiv's parent (parentElement) or to a new child of itemWrapperDiv for better structure.
-                            // Let's append to itemWrapperDiv so it's clear the $ref is the list item. Indent 0 for details as it's self-contained.
-                            displayInteractiveResolvedYaml(item, itemWrapperDiv, 0, effectiveItemSource, refDepth, null); 
-                        } else if (typeof item === 'object' && item !== null) {
-                            const itemDashDiv = document.createElement('div');
-                            itemDashDiv.className = 'resolved-yaml-line';
-                            itemDashDiv.style.paddingLeft = `${indentLevel * 1.5}em`;
-                            itemDashDiv.textContent = `- `;
-                            parentElement.appendChild(itemDashDiv);
-                            displayInteractiveResolvedYaml(item, parentElement, indentLevel + 1, effectiveItemSource, refDepth, null);
-                        } else {
-                            const itemLineDiv = document.createElement('div');
-                            itemLineDiv.className = 'resolved-yaml-line';
-                            itemLineDiv.style.paddingLeft = `${indentLevel * 1.5}em`;
-                            itemLineDiv.textContent = `- ${escapeHtml(item)}`;
-                            parentElement.appendChild(itemLineDiv);
-                        }
-                    });
-                }
-            } else if (typeof dataToDisplay === 'object' && dataToDisplay !== null) {
-                const keys = Object.keys(dataToDisplay);
-                if (keys.length === 0) {
-                    const lineDiv = document.createElement('div');
-                    lineDiv.className = 'resolved-yaml-line';
-                    lineDiv.style.paddingLeft = `${indentLevel * 1.5}em`;
-                    lineDiv.textContent = `{}`;
-                    parentElement.appendChild(lineDiv);
-                } else {
-                    let isFirstKey = true;
-                    keys.forEach(key => {
-                        const value = dataToDisplay[key];
-                        const keyLineDiv = document.createElement('div');
-                        keyLineDiv.className = 'resolved-yaml-line';
-                        keyLineDiv.style.paddingLeft = `${indentLevel * 1.5}em`;
-                        
-                        const keyTextSpan = document.createElement('span');
-                        keyTextSpan.className = 'key-text'; // For specific key styling
-                        keyTextSpan.textContent = escapeHtml(key);
-
-                        // Apply structural styling
-                        if (indentLevel === 0 && openApiTopLevelKeys.includes(key)) {
-                            keyLineDiv.classList.add('openapi-section-title-key');
-                            if(isFirstKey && key === openApiTopLevelKeys[0]) { /* Potentially remove top border for the very first key */ }
-                            else if (!parentElement.querySelector('.openapi-section-title-key')) { // Only add border if it's the *first* top-level key in this specific parent
-                                 // This logic is tricky. Let's apply to all except first overall if indent 0.
-                            }
-                        } else if (inheritedSource === "paths" && key.startsWith('/')) { // inheritedSource now represents the parent key for context
-                            keyLineDiv.classList.add('openapi-path-key');
-                        } else if (parentKey && parentKey.startsWith('/') && httpMethods.includes(key.toLowerCase())) {
-                             keyLineDiv.classList.add('openapi-method-key', `method-${key.toLowerCase()}`);
-                        }
-
-
-                        if (typeof value === 'object' && value !== null && Object.getOwnPropertyDescriptor(value, RESOLVED_REF_MARKER)?.value) {
-                            keyLineDiv.appendChild(keyTextSpan);
-                            keyLineDiv.append(`: `); // Add colon after key text
-                            parentElement.appendChild(keyLineDiv);
-                            // Pass 'key' so the summary can include it.
-                            displayInteractiveResolvedYaml(value, parentElement, indentLevel + 1, inheritedSource, refDepth, key); 
-                        } else if (typeof value === 'object' && value !== null) {
-                            keyLineDiv.appendChild(keyTextSpan);
-                            keyLineDiv.append(`:`);
-                            parentElement.appendChild(keyLineDiv);
-                            displayInteractiveResolvedYaml(value, parentElement, indentLevel + 1, inheritedSource, refDepth, key);
-                        } else {
-                            keyLineDiv.appendChild(keyTextSpan);
-                            keyLineDiv.append(`: ${escapeHtml(value)}`);
-                            parentElement.appendChild(keyLineDiv);
-                        }
-                        isFirstKey = false;
-                    });
-                }
-            } else { 
-                const lineDiv = document.createElement('div');
-                lineDiv.className = 'resolved-yaml-line';
-                lineDiv.style.paddingLeft = `${indentLevel * 1.5}em`;
-                lineDiv.textContent = `${escapeHtml(dataToDisplay)}`;
-                parentElement.appendChild(lineDiv);
-            }
-        }
-
-
-        function generateYamlStringWithComments(node, indentLevel = 0, inheritedSource = null) {
-            let yamlString = "";
-            const indent = "  ".repeat(indentLevel);
-
-            if (typeof node === 'object' && node !== null && Object.getOwnPropertyDescriptor(node, RESOLVED_REF_MARKER)?.value) {
-                const originalRef = Object.getOwnPropertyDescriptor(node, 'originalRefString').value;
-                const resolvedContent = Object.getOwnPropertyDescriptor(node, 'resolvedContent').value;
-                const sourceFile = Object.getOwnPropertyDescriptor(node, 'sourceFile')?.value;
-
-                yamlString += `${indent}# $ref: "${originalRef}"\n`;
-                if (sourceFile && sourceFile !== mainFileName) {
-                    yamlString += `${indent}# Origen del bloque: ${sourceFile}\n`;
-                }
-                yamlString += generateYamlStringWithComments(resolvedContent, indentLevel, sourceFile || inheritedSource); 
-            } else {
-                const directNodeSource = (typeof node === 'object' && node !== null)
-                    ? Object.getOwnPropertyDescriptor(node, YAML_REF_ORIGIN_MARKER)?.value
-                    : null;
-                
-                if (directNodeSource && directNodeSource !== mainFileName && directNodeSource !== inheritedSource) {
-                    yamlString += `${indent}# Origen: ${directNodeSource}\n`;
-                }
-                const currentEffectiveSource = directNodeSource || inheritedSource;
-
-
-                if (Array.isArray(node)) {
-                    if (node.length === 0) {
-                        yamlString += `${indent}[]\n`;
+            function getPath(obj, pointer) { 
+                const effectivePointer = pointer.startsWith('#/') ? pointer.substring(2) : (pointer.startsWith('/') ? pointer.substring(1) : pointer);
+                if (effectivePointer === '') return obj;
+                const parts = effectivePointer.split('/');
+                let current = obj;
+                for (const part of parts) {
+                    const decodedPart = decodeURIComponent(part.replace(/~1/g, '/').replace(/~0/g, '~'));
+                    if (current && typeof current === 'object' && decodedPart in current) {
+                        current = current[decodedPart];
                     } else {
-                        node.forEach(item => {
-                            const itemYamlLines = generateYamlStringWithComments(item, indentLevel + 1, currentEffectiveSource).split('\n').filter(l => l.trim() !== "");
-                            if (itemYamlLines.length > 0) {
-                                yamlString += `${indent}- ${itemYamlLines[0].trimStart()}\n`; // First line with dash
-                                for (let i = 1; i < itemYamlLines.length; i++) {
-                                    yamlString += `${indent}  ${itemYamlLines[i].trimStart()}\n`; // Subsequent lines indented under dash
-                                }
-                            } else if (typeof item !== 'object' || item === null) { // Handle empty but primitive like item
-                                yamlString += `${indent}- ${jsyaml.dump(item, {flowLevel: 0}).trimEnd()}\n`;
+                        throw new Error(`Ruta de referencia no encontrada: "${pointer}". Parte fallida: "${decodedPart}" en el objeto.`);
+                    }
+                }
+                return current;
+            }
+            function parseRefString(refString) { 
+                const hashIndex = refString.indexOf('#');
+                if (hashIndex === -1) return { filePath: refString, pointer: '#/' };
+                if (hashIndex === 0) return { filePath: null, pointer: refString };
+                return { filePath: refString.substring(0, hashIndex), pointer: refString.substring(hashIndex) };
+            }
+            function resolveReferences(currentValue, currentFileFullPath, allFilesData, visitedRefs, usedFilesSet, originalRefPathForNode = null) { 
+                if (typeof currentValue !== 'object' || currentValue === null) {
+                    return currentValue;
+                }
+                if (currentFileFullPath && !visitedRefs.has(currentFileFullPath + '#INTERNAL_VISIT_MARKER_YAML_RESOLVER')) { 
+                     usedFilesSet.add(currentFileFullPath);
+                     visitedRefs.add(currentFileFullPath + '#INTERNAL_VISIT_MARKER_YAML_RESOLVER'); 
+                }
+                if (Array.isArray(currentValue)) {
+                    return currentValue.map(item => resolveReferences(item, currentFileFullPath, allFilesData, new Set(visitedRefs), usedFilesSet));
+                }
+                if (currentValue.hasOwnProperty('$ref')) {
+                    const refString = currentValue.$ref;
+                    if (typeof refString !== 'string') throw new Error(`Valor de $ref inválido: ${refString}.`);
+                    const { filePath: refFilePathPart, pointer: refPointer } = parseRefString(refString);
+                    let targetFileFullPath = refFilePathPart === null ? currentFileFullPath : normalizePath(currentFileFullPath.includes('/') ? currentFileFullPath.substring(0, currentFileFullPath.lastIndexOf('/') + 1) : "", refFilePathPart);
+                    let targetDocumentParsed = allFilesData[targetFileFullPath]?.parsed;
+                    if (!targetDocumentParsed) throw new Error(`Archivo referenciado no cargado: "${targetFileFullPath}" (desde $ref: "${refString}" en "${currentFileFullPath}").`);
+                    usedFilesSet.add(targetFileFullPath); 
+                    const fullRefIdentifier = targetFileFullPath + refPointer;
+                    if (visitedRefs.has(fullRefIdentifier)) throw new Error(`Referencia circular detectada para: "${fullRefIdentifier}"`);
+                    visitedRefs.add(fullRefIdentifier);
+                    let resolvedPart = getPath(targetDocumentParsed, refPointer); 
+                    let clonedResolvedPart = JSON.parse(JSON.stringify(resolvedPart));
+                    const fullyResolvedContent = resolveReferences(clonedResolvedPart, targetFileFullPath, allFilesData, new Set(visitedRefs), usedFilesSet, refString);
+                    const refWrapper = {};
+                    Object.defineProperty(refWrapper, RESOLVED_REF_MARKER, { value: true, enumerable: false });
+                    Object.defineProperty(refWrapper, 'originalRefString', { value: refString, enumerable: false });
+                    Object.defineProperty(refWrapper, 'resolvedContent', { value: fullyResolvedContent, enumerable: false });
+                    if (refFilePathPart !== null) Object.defineProperty(refWrapper, 'sourceFile', { value: targetFileFullPath, enumerable: false });
+                    if (targetFileFullPath !== currentFileFullPath && targetFileFullPath !== mainFileName) Object.defineProperty(refWrapper, YAML_REF_ORIGIN_MARKER, { value: targetFileFullPath, enumerable: false });
+                    return refWrapper;
+                }
+                const newObj = {};
+                let isExternalBlock = currentFileFullPath !== mainFileName;
+                for (const key in currentValue) {
+                    if (Object.prototype.hasOwnProperty.call(currentValue, key)) { 
+                        if (key === YAML_REF_ORIGIN_MARKER || key === RESOLVED_REF_MARKER) continue;
+                        newObj[key] = resolveReferences(currentValue[key], currentFileFullPath, allFilesData, new Set(visitedRefs), usedFilesSet);
+                    }
+                }
+                const existingOrigin = Object.getOwnPropertyDescriptor(currentValue, YAML_REF_ORIGIN_MARKER)?.value;
+                if (existingOrigin) Object.defineProperty(newObj, YAML_REF_ORIGIN_MARKER, { value: existingOrigin, enumerable: false });
+                else if (isExternalBlock) Object.defineProperty(newObj, YAML_REF_ORIGIN_MARKER, { value: currentFileFullPath, enumerable: false });
+                return newObj;
+            }
+            function displayInteractiveResolvedYaml(dataToDisplay, parentElement, indentLevel = 0, inheritedSource = null, refDepth = 0, parentKeyForContext = null) { 
+                const indentSpaces = '  '.repeat(indentLevel);
+                if (typeof dataToDisplay === 'object' && dataToDisplay !== null && Object.getOwnPropertyDescriptor(dataToDisplay, RESOLVED_REF_MARKER)?.value) {
+                    const originalRef = Object.getOwnPropertyDescriptor(dataToDisplay, 'originalRefString').value;
+                    const resolvedContent = Object.getOwnPropertyDescriptor(dataToDisplay, 'resolvedContent').value;
+                    const sourceFile = Object.getOwnPropertyDescriptor(dataToDisplay, 'sourceFile')?.value; 
+                    const details = document.createElement('details');
+                    details.style.paddingLeft = `${indentLevel * 1.5}em`;
+                    const summary = document.createElement('summary');
+                    summary.className = 'ref-original-line';
+                    summary.textContent = `${parentKeyForContext ? escapeHtml(parentKeyForContext) + ': ' : ''}$ref: "${escapeHtml(originalRef)}"`; 
+                    details.appendChild(summary);
+                    const contentBlock = document.createElement('div');
+                    contentBlock.className = 'resolved-content-block';
+                    contentBlock.classList.add(blockColorClasses[refDepth % blockColorClasses.length]);
+                    if (sourceFile && sourceFile !== mainFileName) {
+                        const annotationDiv = document.createElement('div');
+                        annotationDiv.className = 'source-annotation-line';
+                        annotationDiv.textContent = `${'  '.repeat(1)}# Origen: ${escapeHtml(sourceFile)}`; 
+                        contentBlock.appendChild(annotationDiv);
+                    }
+                    displayInteractiveResolvedYaml(resolvedContent, contentBlock, 0, sourceFile || inheritedSource, refDepth + 1, null); 
+                    details.appendChild(contentBlock);
+                    parentElement.appendChild(details);
+                } else if (Array.isArray(dataToDisplay)) {
+                    const parentIsExternal = inheritedSource && inheritedSource !== mainFileName;
+                    if (dataToDisplay.length === 0) {
+                        const lineDiv = document.createElement('div');
+                        lineDiv.className = 'resolved-yaml-line';
+                        lineDiv.style.paddingLeft = `${indentLevel * 1.5}em`;
+                        lineDiv.textContent = `[]`;
+                        if(parentIsExternal) lineDiv.classList.add('resolved-external-source-block');
+                        parentElement.appendChild(lineDiv);
+                    } else {
+                        dataToDisplay.forEach(item => {
+                            const itemSource = (typeof item === 'object' && item !== null) ? Object.getOwnPropertyDescriptor(item, YAML_REF_ORIGIN_MARKER)?.value : null;
+                            const effectiveItemSource = itemSource || inheritedSource;
+                            if (typeof item === 'object' && item !== null && Object.getOwnPropertyDescriptor(item, RESOLVED_REF_MARKER)?.value) {
+                                const itemWrapperDiv = document.createElement('div'); 
+                                itemWrapperDiv.className = 'resolved-yaml-line'; 
+                                itemWrapperDiv.style.paddingLeft = `${indentLevel * 1.5}em`;
+                                itemWrapperDiv.textContent = `- `; 
+                                if(parentIsExternal && !itemSource) itemWrapperDiv.classList.add('resolved-external-source-block');
+                                parentElement.appendChild(itemWrapperDiv);
+                                displayInteractiveResolvedYaml(item, itemWrapperDiv, 0, effectiveItemSource, refDepth, null); 
+                            } else if (typeof item === 'object' && item !== null) {
+                                const itemDashDiv = document.createElement('div');
+                                itemDashDiv.className = 'resolved-yaml-line';
+                                itemDashDiv.style.paddingLeft = `${indentLevel * 1.5}em`;
+                                itemDashDiv.textContent = `- `;
+                                if(parentIsExternal && !itemSource) itemDashDiv.classList.add('resolved-external-source-block');
+                                parentElement.appendChild(itemDashDiv);
+                                displayInteractiveResolvedYaml(item, parentElement, indentLevel + 1, effectiveItemSource, refDepth, null);
                             } else {
-                                yamlString += `${indent}-\n`; // Empty item, could be {} or []
+                                const itemLineDiv = document.createElement('div');
+                                itemLineDiv.className = 'resolved-yaml-line';
+                                itemLineDiv.style.paddingLeft = `${indentLevel * 1.5}em`;
+                                itemLineDiv.textContent = `- ${escapeHtml(item)}`;
+                                if(parentIsExternal && !itemSource) itemLineDiv.classList.add('resolved-external-source-block');
+                                parentElement.appendChild(itemLineDiv);
                             }
                         });
                     }
-                } else if (typeof node === 'object' && node !== null) {
-                    const keys = Object.keys(node);
+                } else if (typeof dataToDisplay === 'object' && dataToDisplay !== null) {
+                    const keys = Object.keys(dataToDisplay);
                     if (keys.length === 0) {
-                        yamlString += `${indent}{}\n`;
+                        const lineDiv = document.createElement('div');
+                        lineDiv.className = 'resolved-yaml-line';
+                        lineDiv.style.paddingLeft = `${indentLevel * 1.5}em`;
+                        lineDiv.textContent = `{}`;
+                        if (inheritedSource && inheritedSource !== mainFileName) lineDiv.classList.add('resolved-external-source-block');
+                        parentElement.appendChild(lineDiv);
                     } else {
-                        keys.forEach((key) => {
+                        let firstKeyProcessed = (parentElement === resolvedContentDiv); 
+                        keys.forEach(key => {
+                            const value = dataToDisplay[key];
+                            const keyLineDiv = document.createElement('div');
+                            keyLineDiv.className = 'resolved-yaml-line';
+                            keyLineDiv.style.paddingLeft = `${indentLevel * 1.5}em`;
+                            const keyTextSpan = document.createElement('span');
+                            keyTextSpan.className = 'key-text'; 
+                            keyTextSpan.textContent = escapeHtml(key);
+                            if (indentLevel === 0 && openApiTopLevelKeys.includes(key)) {
+                                keyLineDiv.classList.add('openapi-section-title-key');
+                                if (!firstKeyProcessed) { 
+                                    keyLineDiv.style.borderTop = '1px dashed #d1d5db';
+                                    keyLineDiv.style.paddingTop = '0.75em';
+                                    keyLineDiv.style.marginTop = '1em';
+                                }
+                                firstKeyProcessed = false; 
+                            } else if (parentKeyForContext === "paths" && key.startsWith('/')) { 
+                                keyLineDiv.classList.add('openapi-path-key');
+                            } else if (parentKeyForContext && parentKeyForContext.startsWith('/') && httpMethods.includes(key.toLowerCase())) {
+                                 keyLineDiv.classList.add('openapi-method-key', `method-${key.toLowerCase()}`);
+                            }
+                            const valueSource = (typeof value === 'object' && value !== null) ? Object.getOwnPropertyDescriptor(value, YAML_REF_ORIGIN_MARKER)?.value : null;
+                            const effectiveValueSource = valueSource || inheritedSource;
+                            if (typeof value === 'object' && value !== null && Object.getOwnPropertyDescriptor(value, RESOLVED_REF_MARKER)?.value) {
+                                keyLineDiv.appendChild(keyTextSpan);
+                                keyLineDiv.append(`: `); 
+                                parentElement.appendChild(keyLineDiv);
+                                displayInteractiveResolvedYaml(value, parentElement, indentLevel + 1, effectiveValueSource, refDepth, key); 
+                            } else if (typeof value === 'object' && value !== null) {
+                                keyLineDiv.appendChild(keyTextSpan);
+                                keyLineDiv.append(`:`);
+                                parentElement.appendChild(keyLineDiv);
+                                displayInteractiveResolvedYaml(value, parentElement, indentLevel + 1, effectiveValueSource, refDepth, key);
+                            } else {
+                                keyLineDiv.appendChild(keyTextSpan);
+                                keyLineDiv.append(`: ${escapeHtml(value)}`);
+                                parentElement.appendChild(keyLineDiv);
+                            }
+                        });
+                    }
+                } else { 
+                    const lineDiv = document.createElement('div');
+                    lineDiv.className = 'resolved-yaml-line';
+                    lineDiv.style.paddingLeft = `${indentLevel * 1.5}em`;
+                    lineDiv.textContent = `${escapeHtml(dataToDisplay)}`;
+                    if (inheritedSource && inheritedSource !== mainFileName) lineDiv.classList.add('resolved-external-source-block');
+                    parentElement.appendChild(lineDiv);
+                }
+            }
+            function generateYamlStringWithComments(node, indentLevel = 0, inheritedSource = null) { 
+                let yamlString = "";
+                const indent = "  ".repeat(indentLevel);
+                if (typeof node === 'object' && node !== null && Object.getOwnPropertyDescriptor(node, RESOLVED_REF_MARKER)?.value) {
+                    const originalRef = Object.getOwnPropertyDescriptor(node, 'originalRefString').value;
+                    const resolvedContent = Object.getOwnPropertyDescriptor(node, 'resolvedContent').value;
+                    const sourceFile = Object.getOwnPropertyDescriptor(node, 'sourceFile')?.value;
+                    yamlString += `${indent}# $ref: "${originalRef}"\n`;
+                    if (sourceFile && sourceFile !== mainFileName) yamlString += `${indent}# Origen del bloque: ${sourceFile}\n`;
+                    yamlString += generateYamlStringWithComments(resolvedContent, indentLevel, sourceFile || inheritedSource); 
+                } else {
+                    const directNodeSource = (typeof node === 'object' && node !== null) ? Object.getOwnPropertyDescriptor(node, YAML_REF_ORIGIN_MARKER)?.value : null;
+                    if (directNodeSource && directNodeSource !== mainFileName && directNodeSource !== inheritedSource) yamlString += `${indent}# Origen: ${directNodeSource}\n`;
+                    const currentEffectiveSource = directNodeSource || inheritedSource;
+                    if (Array.isArray(node)) {
+                        if (node.length === 0) yamlString += `${indent}[]\n`;
+                        else node.forEach(item => {
+                            const itemYamlLines = generateYamlStringWithComments(item, indentLevel + 1, currentEffectiveSource).split('\n').filter(l => l.trim() !== "" || l === ""); 
+                            if (itemYamlLines.length > 0) {
+                                yamlString += `${indent}- ${itemYamlLines[0].trimStart()}\n`;
+                                for (let i = 1; i < itemYamlLines.length; i++) yamlString += `${indent}  ${itemYamlLines[i]}\n`; 
+                            } else if (item === null || typeof item !== 'object') yamlString += `${indent}- ${jsyaml.dump(item, {flowLevel: 0}).trimEnd()}\n`;
+                            else yamlString += `${indent}-\n`; 
+                        });
+                    } else if (typeof node === 'object' && node !== null) {
+                        const keys = Object.keys(node);
+                        if (keys.length === 0) yamlString += `${indent}{}\n`;
+                        else keys.forEach((key) => {
                             const value = node[key];
-                            yamlString += `${indent}${key}:\n`;
+                            const dumpedKey = jsyaml.dump(key, {flowLevel:0}).trim(); 
+                            yamlString += `${indent}${dumpedKey}:\n`; 
                             yamlString += generateYamlStringWithComments(value, indentLevel + 1, currentEffectiveSource);
                         });
-                    }
-                } else { 
-                    let dumpedScalar = jsyaml.dump(node, { indent: 2, flowLevel: -1 }); 
-                    dumpedScalar = dumpedScalar.trimEnd();
-                    if (dumpedScalar.includes('\n')) { 
-                        yamlString += `${indent}${dumpedScalar.split('\n').join(`\n${indent}`)}\n`;
-                    } else {
-                        yamlString += `${indent}${dumpedScalar}\n`;
+                    } else { 
+                        let dumpedScalar = jsyaml.dump(node, { indent: 0, flowLevel: -1 }); 
+                        dumpedScalar = dumpedScalar.trimEnd();
+                        if (dumpedScalar.includes('\n')) { 
+                            const scalarLines = dumpedScalar.split('\n');
+                            yamlString += `${indent}${scalarLines[0]}\n`;
+                            for(let i = 1; i < scalarLines.length; i++) yamlString += `${indent}${scalarLines[i]}\n`;
+                        } else yamlString += `${indent}${dumpedScalar}\n`;
                     }
                 }
+                return yamlString;
             }
-            return yamlString;
-        }
 
-
-        processButton.addEventListener('click', () => {
-            if (!mainFileName || !loadedFilesData[mainFileName]) {
-                showMessage('error', 'No hay un archivo YAML principal seleccionado de una carpeta "reference".');
-                return;
-            }
-            clearMessages();
-            resolvedContentDiv.innerHTML = 'Procesando $refs...'; 
-            currentResolvedObject = null;
-            generateSummaryButton.disabled = true;
-            downloadButton.disabled = true;
-            apiSummaryArea.classList.add('hidden');
-            apiSummaryContent.textContent = '';
-            usedFilesArea.classList.add('hidden');
-            usedFilesListContent.innerHTML = '';
-            filesUsedInResolution.clear();
-
-            setTimeout(() => {
-                try {
-                    const mainFileParsed = loadedFilesData[mainFileName].parsed;
-                    const objectToResolve = JSON.parse(JSON.stringify(mainFileParsed)); 
-                    
-                    currentResolvedObject = resolveReferences(objectToResolve, mainFileName, loadedFilesData, new Set(), filesUsedInResolution);
-                    
-                    // For interactive display, pass parentKey as null for the root object
-                    displayInteractiveResolvedYaml(currentResolvedObject, resolvedContentDiv, 0, mainFileName, 0, null);
-                    
-                    showMessage('success', '¡Referencias $ref resueltas exitosamente!');
-                    generateSummaryButton.disabled = false; 
-                    downloadButton.disabled = false;
-
-                    if (filesUsedInResolution.size > 0) {
-                        usedFilesArea.classList.remove('hidden');
-                        usedFilesListContent.innerHTML = '';
-                        Array.from(filesUsedInResolution).sort().forEach(filePath => {
-                            const li = document.createElement('li');
-                            li.textContent = filePath;
-                            usedFilesListContent.appendChild(li);
-                        });
-                    }
-
-                } catch (error) {
-                    resolvedContentDiv.innerHTML = `<div class="p-2 text-red-600">Error al resolver: ${escapeHtml(error.message)}</div>`;
-                    showMessage('error', `Error durante la resolución de $refs: ${error.message}`);
-                    console.error("Error resolving $refs:", error);
-                    currentResolvedObject = null;
-                    generateSummaryButton.disabled = true;
-                    downloadButton.disabled = true;
+            processButton.addEventListener('click', () => {
+                if (!mainFileName || !loadedFilesData[mainFileName]) {
+                    showMessage('error', 'No hay un archivo YAML principal seleccionado.'); return;
                 }
-            }, 10);
-        });
+                clearMessages(); 
+                if (resolvedContentDiv) resolvedContentDiv.innerHTML = 'Procesando $refs...'; 
+                currentResolvedObject = null; initializeUIState(); filesUsedInResolution.clear();
 
-        function downloadTextFile(text, filename, mimeType) {
-            const blob = new Blob([text], { type: mimeType });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-        
-        downloadButton.addEventListener('click', () => {
-            if (!currentResolvedObject) {
-                showMessage('info', 'Primero resuelve las referencias $ref para poder descargar el archivo.');
-                return;
-            }
-            try {
-                const yamlStringToDownload = generateYamlStringWithComments(currentResolvedObject, 0, mainFileName);
-                downloadTextFile(yamlStringToDownload, `${mainFileName.replace(/\.ya?ml$/, '')}_resuelto_con_comentarios.yaml`, 'application/x-yaml');
-                showMessage('success', 'Archivo YAML resuelto generado para descarga.');
-
-            } catch (error) {
-                showMessage('error', `Error al generar archivo para descarga: ${error.message}`);
-                console.error('Error generating file for download:', error);
-            }
-        });
-        
-        function createCleanCloneForAI(obj) {
-            if (typeof obj !== 'object' || obj === null) {
-                return obj;
-            }
-            if (Object.getOwnPropertyDescriptor(obj, RESOLVED_REF_MARKER)?.value) {
-                return createCleanCloneForAI(Object.getOwnPropertyDescriptor(obj, 'resolvedContent').value);
-            }
-
-            let clone = Array.isArray(obj) ? [] : {};
-            for (const key in obj) {
-                if (Object.prototype.hasOwnProperty.call(obj, key)) { 
-                    if (key === YAML_REF_ORIGIN_MARKER || key === RESOLVED_REF_MARKER) { 
-                        continue; 
+                setTimeout(() => {
+                    try {
+                        const objectToResolve = JSON.parse(JSON.stringify(loadedFilesData[mainFileName].parsed)); 
+                        currentResolvedObject = resolveReferences(objectToResolve, mainFileName, loadedFilesData, new Set(), filesUsedInResolution);
+                        if (resolvedContentDiv) displayInteractiveResolvedYaml(currentResolvedObject, resolvedContentDiv, 0, mainFileName, 0, "root"); 
+                        
+                        showMessage('success', '¡Referencias $ref resueltas exitosamente!');
+                        generateSummaryButton.disabled = false; downloadButton.disabled = false;
+                        if (filesUsedInResolution.size > 0) {
+                            usedFilesArea.classList.remove('hidden');
+                            usedFilesListContent.innerHTML = '';
+                            Array.from(filesUsedInResolution).sort().forEach(filePath => {
+                                const li = document.createElement('li'); li.textContent = filePath;
+                                usedFilesListContent.appendChild(li);
+                            });
+                        }
+                    } catch (error) {
+                        if (resolvedContentDiv) resolvedContentDiv.innerHTML = `<div class="p-2 text-red-600">Error: ${escapeHtml(error.message)}</div>`;
+                        showMessage('error', `Error al resolver $refs: ${error.message}`);
+                        console.error("Error resolving $refs:", error);
+                        currentResolvedObject = null; initializeUIState();
                     }
-                    clone[key] = createCleanCloneForAI(obj[key]);
-                }
-            }
-            return clone;
-        }
+                }, 10);
+            });
 
-        generateSummaryButton.addEventListener('click', async () => {
-            const userApiKey = geminiApiKeyInput.value.trim();
-            if (!userApiKey) {
-                showMessage('error', 'Por favor, ingresa tu API Key para OP Consultor.');
-                geminiApiKeyInput.focus();
-                return;
-            }
-
-            if (!currentResolvedObject) {
-                showMessage('info', 'Primero resuelve las referencias $ref para poder consultar a OP Consultor.');
-                return;
+            function downloadTextFile(text, filename, mimeType) { 
+                const blob = new Blob([text], { type: mimeType }); const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = filename;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
             }
             
-            const cleanObjectForAI = createCleanCloneForAI(currentResolvedObject);
-            const yamlStringForAI = jsyaml.dump(cleanObjectForAI, { indent: 2, noRefs: true });
-
-            showMessage('info', 'Consultando a OP Consultor...');
-            apiSummaryArea.classList.remove('hidden');
-            apiSummaryContent.textContent = 'Procesando con OP Consultor...';
-            summaryButtonSpinner.classList.remove('hidden');
-            generateSummaryButton.disabled = true;
-
-            const prompt = `Eres un asistente experto en API llamado OP Consultor. Analiza la siguiente especificación OpenAPI (en formato YAML) y proporciona un resumen conciso y fácil de entender en español. Destaca los principales recursos o endpoints, el propósito general de la API y cualquier característica o modelo de datos clave. Formatea tu respuesta de manera clara usando Markdown (por ejemplo, encabezados, listas). Especificación OpenAPI: \n\n\`\`\`yaml\n${yamlStringForAI}\n\`\`\``;
-
-            const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }]
-            };
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${userApiKey}`;
-
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    console.error('Error de OP Consultor (API):', errorData);
-                    throw new Error(`Error de OP Consultor (API): ${errorData?.error?.message || response.statusText}`);
+            downloadButton.addEventListener('click', () => { 
+                if (!currentResolvedObject) { showMessage('info', 'Resuelve $refs para descargar.'); return; }
+                try {
+                    const yamlString = generateYamlStringWithComments(currentResolvedObject, 0, mainFileName);
+                    downloadTextFile(yamlString, `${mainFileName.replace(/\.ya?ml$/, '')}_resuelto_con_comentarios.yaml`, 'application/x-yaml');
+                    showMessage('success', 'Archivo YAML generado para descarga.');
+                } catch (e) { showMessage('error', `Error al generar descarga: ${e.message}`); console.error(e); }
+            });
+            
+            function createCleanCloneForAI(obj) { 
+                if (typeof obj !== 'object' || obj === null) return obj;
+                if (Object.getOwnPropertyDescriptor(obj, RESOLVED_REF_MARKER)?.value) {
+                    return createCleanCloneForAI(Object.getOwnPropertyDescriptor(obj, 'resolvedContent').value);
                 }
-
-                const result = await response.json();
-
-                if (result.candidates && result.candidates.length > 0 &&
-                    result.candidates[0].content && result.candidates[0].content.parts &&
-                    result.candidates[0].content.parts.length > 0) {
-                    const summaryText = result.candidates[0].content.parts[0].text;
-                    apiSummaryContent.textContent = summaryText; 
-                    showMessage('success', 'Resumen generado exitosamente por OP Consultor.');
-                } else {
-                    console.error('Respuesta inesperada de OP Consultor (API):', result);
-                    throw new Error('No se pudo obtener un resumen de OP Consultor o la respuesta está vacía.');
+                let clone = Array.isArray(obj) ? [] : {};
+                for (const key in obj) {
+                    if (Object.prototype.hasOwnProperty.call(obj, key)) { 
+                        if (key === YAML_REF_ORIGIN_MARKER || key === RESOLVED_REF_MARKER) continue; 
+                        clone[key] = createCleanCloneForAI(obj[key]);
+                    }
                 }
-            } catch (error) {
-                apiSummaryContent.textContent = `Error al generar resumen con OP Consultor: ${error.message}`;
-                showMessage('error', `Error al generar resumen con OP Consultor: ${error.message}`);
-                console.error('Error llamando a OP Consultor (API):', error);
-            } finally {
-                summaryButtonSpinner.classList.add('hidden');
-                generateSummaryButton.disabled = false; 
+                return clone;
             }
+
+            async function handleGenerateSummary() {
+                const userApiKey = geminiApiKeyInput.value.trim();
+                if (!userApiKey) { showMessage('error', 'Ingresa tu API Key para OP Consultor.'); geminiApiKeyInput.focus(); return; }
+                if (!currentResolvedObject) { showMessage('info', 'Resuelve $refs para consultar a OP Consultor.'); return; }
+                
+                const cleanObjectForAI = createCleanCloneForAI(currentResolvedObject);
+                const yamlStringForAI = jsyaml.dump(cleanObjectForAI, { indent: 2, noRefs: true });
+                const prompt = `Eres un asistente experto en API llamado OP Consultor. Analiza la siguiente especificación OpenAPI (YAML) y proporciona un resumen conciso en español. Destaca: objetivo general, principales endpoints y su función, y modelos de datos clave. Formato Markdown. Especificación:\n\n\`\`\`yaml\n${yamlStringForAI}\n\`\`\``;
+
+                const tokenCount = await countTokensWithGemini(prompt, userApiKey, 'gemini-1.5-flash-latest');
+                if (tokenCount === null) { 
+                    generateSummaryButton.disabled = false; summaryButtonSpinner.classList.add('hidden'); return;
+                }
+
+                showConfirmationModal(
+                    `OP Consultor procesará aproximadamente ${tokenCount} tokens de entrada para generar el resumen. ¿Deseas continuar?`,
+                    async () => { 
+                        showMessage('info', 'Consultando a OP Consultor para resumen...');
+                        apiSummaryArea.classList.remove('hidden'); apiSummaryContent.textContent = 'Procesando...';
+                        summaryButtonSpinner.classList.remove('hidden'); generateSummaryButton.disabled = true;
+                        await callGeminiForSummary(prompt, userApiKey);
+                        summaryButtonSpinner.classList.add('hidden'); generateSummaryButton.disabled = false;
+                    }
+                );
+            }
+            generateSummaryButton.addEventListener('click', handleGenerateSummary);
+
+            async function callGeminiForSummary(prompt, apiKey) {
+                const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+                try {
+                    const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    if (!response.ok) {
+                        let errMsg = `Error de OP Consultor (API): ${response.statusText}`;
+                        try { const errData = await response.json(); console.error('Error API:', errData); if (response.status === 429) { errMsg = `Error API: Cuota excedida (429). Revisa tu plan.`; if (errData.error?.details) { const r = errData.error.details.find(d => d['@type'] === 'type.googleapis.com/google.rpc.RetryInfo'); if (r?.retryDelay) errMsg += ` Intenta en ${r.retryDelay.replace('s',' seg')}.`;}} else if (errData.error?.message) errMsg = `Error API: ${errData.error.message}`; } catch(e){} throw new Error(errMsg);
+                    }
+                    const result = await response.json();
+                    if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
+                        apiSummaryContent.textContent = result.candidates[0].content.parts[0].text; 
+                        showMessage('success', 'Resumen generado por OP Consultor.');
+                    } else { throw new Error('Respuesta inesperada de OP Consultor.'); }
+                } catch (error) {
+                    apiSummaryContent.textContent = error.message; showMessage('error', error.message); console.error(error);
+                }
+            }
+            
+            function populateCurlOperationSelectors() {
+                curlOperationPath.innerHTML = '<option value="">-- Selecciona un Path --</option>';
+                curlOperationMethod.innerHTML = '<option value="">-- Selecciona un Método --</option>';
+                curlOperationMethod.disabled = true;
+                validateCurlButton.disabled = true;
+
+                if (!currentResolvedObject || !currentResolvedObject.paths) return;
+
+                const paths = Object.keys(currentResolvedObject.paths);
+                paths.sort().forEach(path => {
+                    const option = document.createElement('option');
+                    option.value = path; option.textContent = path;
+                    curlOperationPath.appendChild(option);
+                });
+                curlOperationPath.disabled = false;
+            }
+
+            curlOperationPath.addEventListener('change', () => {
+                const selectedPath = curlOperationPath.value;
+                curlOperationMethod.innerHTML = '<option value="">-- Selecciona un Método --</option>';
+                curlOperationMethod.disabled = true;
+                validateCurlButton.disabled = true;
+
+                if (selectedPath && currentResolvedObject.paths[selectedPath]) {
+                    const methods = Object.keys(currentResolvedObject.paths[selectedPath]).filter(m => httpMethods.includes(m.toLowerCase()));
+                    if (methods.length > 0) {
+                        methods.sort().forEach(method => {
+                            const option = document.createElement('option');
+                            option.value = method; option.textContent = method.toUpperCase();
+                            curlOperationMethod.appendChild(option);
+                        });
+                        curlOperationMethod.disabled = false;
+                    }
+                }
+            });
+            curlOperationMethod.addEventListener('change', () => {
+                validateCurlButton.disabled = !curlOperationPath.value || !curlOperationMethod.value;
+            });
+
+            async function handleValidateCurl() {
+                const userApiKey = geminiApiKeyInput.value.trim();
+                if (!userApiKey) { showMessage('error', 'Ingresa tu API Key para OP Consultor.'); geminiApiKeyInput.focus(); return; }
+                
+                const selectedPath = curlOperationPath.value;
+                const selectedMethod = curlOperationMethod.value;
+                const userCurlCommand = curlCommandInput.value.trim();
+
+                if (!selectedPath || !selectedMethod) { showMessage('error', 'Selecciona un Path y Método.'); return; }
+                if (!userCurlCommand) { showMessage('error', 'Ingresa el comando cURL a validar.'); curlCommandInput.focus(); return; }
+                if (!currentResolvedObject) { showMessage('info', 'Resuelve $refs primero.'); return; }
+
+                const operationDefinition = currentResolvedObject.paths?.[selectedPath]?.[selectedMethod];
+                if (!operationDefinition) { showMessage('error', 'Definición de operación no encontrada.'); return; }
+
+                let relevantSchemas = {};
+                function extractSchemas(obj) { 
+                    if (typeof obj !== 'object' || obj === null) return;
+                    if (obj.$ref && typeof obj.$ref === 'string' && obj.$ref.startsWith('#/components/schemas/')) {
+                        const schemaName = obj.$ref.substring('#/components/schemas/'.length);
+                        if (currentResolvedObject.components?.schemas?.[schemaName] && !relevantSchemas[schemaName]) {
+                            relevantSchemas[schemaName] = currentResolvedObject.components.schemas[schemaName];
+                            extractSchemas(relevantSchemas[schemaName]); 
+                        }
+                    }
+                    for (const key in obj) if (obj.hasOwnProperty(key)) extractSchemas(obj[key]);
+                }
+                extractSchemas(operationDefinition); 
+                
+                const apiInfo = currentResolvedObject.info || { title: "API Desconocida", version: "N/A" };
+                const globalSecurity = currentResolvedObject.security || [];
+                const securitySchemes = currentResolvedObject.components?.securitySchemes || {};
+
+                const promptForCurlValidation = `Eres OP Consultor, un validador experto de comandos cURL para especificaciones OpenAPI.
+Tarea:
+1. Analiza la siguiente definición de operación OpenAPI y los componentes/esquemas relevantes.
+2. Basado en esta definición, genera un comando cURL "ideal" y completo para invocar esta operación. Incluye placeholders realistas (ej. <TU_TOKEN_AQUI>, <ID_DE_EJEMPLO>, etc.) donde sea necesario. Considera parámetros de path, query, headers, y el requestBody si aplica.
+3. Compara el comando cURL proporcionado por el usuario con tu comando cURL ideal.
+4. Determina si el comando del usuario es VÁLIDO o INVÁLIDO.
+5. Proporciona una EXPLICACIÓN clara en español de tu validación. Si es inválido, explica por qué y qué podría faltar o estar incorrecto. Si es válido, confírmalo.
+
+Información de la API:
+Título: ${apiInfo.title}
+Versión: ${apiInfo.version}
+
+Definición de la Operación (${selectedMethod.toUpperCase()} ${selectedPath}):
+\`\`\`yaml
+${jsyaml.dump(operationDefinition, { indent: 2, noRefs: true })}
+\`\`\`
+
+Esquemas Relevantes (de #/components/schemas/):
+\`\`\`yaml
+${Object.keys(relevantSchemas).length > 0 ? jsyaml.dump(relevantSchemas, { indent: 2, noRefs: true }) : 'Ninguno directamente referenciado en esta operación.'}
+\`\`\`
+
+Esquemas de Seguridad Globales y Definiciones (de #/components/securitySchemes/):
+Seguridad Global Aplicada: ${jsyaml.dump(globalSecurity, { indent:2, noRefs: true})}
+Definiciones de Esquemas de Seguridad:
+\`\`\`yaml
+${Object.keys(securitySchemes).length > 0 ? jsyaml.dump(securitySchemes, { indent: 2, noRefs: true }) : 'Ninguno definido.'}
+\`\`\`
+
+Comando cURL del Usuario a Validar:
+\`\`\`
+${userCurlCommand}
+\`\`\`
+
+Responde en formato JSON con las siguientes claves: "isValid" (boolean), "explanation" (string, en español), "suggestedCurl" (string).
+`;
+                const tokenCount = await countTokensWithGemini(promptForCurlValidation, userApiKey, 'gemini-1.5-flash-latest');
+                if (tokenCount === null) { validateCurlButton.disabled = false; curlValidatorSpinner.classList.add('hidden'); return; }
+
+                showConfirmationModal(
+                    `OP Consultor procesará aproximadamente ${tokenCount} tokens de entrada para validar el cURL. ¿Deseas continuar?`,
+                    async () => { 
+                        showMessage('info', 'Validando comando cURL con OP Consultor...');
+                        curlValidationResultArea.classList.remove('hidden');
+                        curlValidationOutput.innerHTML = '<div class="p-2">Procesando con OP Consultor...</div>';
+                        curlValidatorSpinner.classList.remove('hidden'); validateCurlButton.disabled = true;
+                        await callGeminiForCurlValidation(promptForCurlValidation, userApiKey);
+                        curlValidatorSpinner.classList.add('hidden'); validateCurlButton.disabled = false;
+                    }
+                );
+            }
+            validateCurlButton.addEventListener('click', handleValidateCurl);
+
+            async function callGeminiForCurlValidation(prompt, apiKey) {
+                const payload = { 
+                    contents: [{ role: "user", parts: [{ text: prompt }] }],
+                    generationConfig: { responseMimeType: "application/json" } 
+                };
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+                try {
+                    const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    if (!response.ok) { 
+                        let errMsg = `Error de OP Consultor (Validación cURL): ${response.statusText}`;
+                        try { const errData = await response.json(); console.error('Error API (cURL):', errData); if (response.status === 429) { errMsg = `Error API: Cuota excedida (429). Revisa tu plan.`; if (errData.error?.details) { const r = errData.error.details.find(d => d['@type'] === 'type.googleapis.com/google.rpc.RetryInfo'); if (r?.retryDelay) errMsg += ` Intenta en ${r.retryDelay.replace('s',' seg')}.`;}} else if (errData.error?.message) errMsg = `Error API: ${errData.error.message}`; } catch(e){} throw new Error(errMsg);
+                    }
+                    const result = await response.json();
+                    if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
+                        const jsonResponseText = result.candidates[0].content.parts[0].text;
+                        try {
+                            const validationResult = JSON.parse(jsonResponseText);
+                            let outputHtml = `<p class="mb-2"><strong>Validación:</strong> <span class="${validationResult.isValid ? 'text-green-600' : 'text-red-600'}">${validationResult.isValid ? 'VÁLIDO' : 'INVÁLIDO'}</span></p>`;
+                            outputHtml += `<p class="mb-2"><strong>Explicación de OP Consultor:</strong><br>${escapeHtml(validationResult.explanation).replace(/\n/g, '<br>')}</p>`;
+                            if (validationResult.suggestedCurl) {
+                                outputHtml += `<p class="mb-1"><strong>Comando cURL Sugerido por OP Consultor:</strong></p><pre class="bg-gray-100 p-2 rounded text-xs whitespace-pre-wrap break-all">${escapeHtml(validationResult.suggestedCurl)}</pre>`;
+                            }
+                            curlValidationOutput.innerHTML = outputHtml;
+                            showMessage('success', 'Validación de cURL completada por OP Consultor.');
+                        } catch (e) {
+                            console.error("Error parseando JSON de validación:", e, "\nTexto recibido:", jsonResponseText);
+                            curlValidationOutput.innerHTML = `<p class="text-red-600">Error: OP Consultor no devolvió un JSON válido.</p><p class="text-xs mt-2">Respuesta cruda:<br>${escapeHtml(jsonResponseText)}</p>`;
+                            showMessage('error', 'Error procesando respuesta de OP Consultor.');
+                        }
+                    } else { throw new Error('Respuesta inesperada de OP Consultor para validación cURL.'); }
+                } catch (error) {
+                    curlValidationOutput.innerHTML = `<p class="text-red-600">${error.message}</p>`; 
+                    showMessage('error', error.message); console.error(error);
+                }
+            }
+
+            async function countTokensWithGemini(promptText, apiKey, model = 'gemini-1.5-flash-latest') {
+                const payload = { contents: [{ role: "user", parts: [{ text: promptText }] }] };
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:countTokens?key=${apiKey}`;
+                try {
+                    const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    if (!response.ok) {
+                        let errMsg = `Error al contar tokens: ${response.statusText}`;
+                        try { const errData = await response.json(); console.error('Error API (countTokens):', errData); if (errData.error?.message) errMsg = `Error al contar tokens: ${errData.error.message}`; } catch(e){}
+                        showMessage('error', errMsg); console.error(errMsg); return null;
+                    }
+                    const result = await response.json();
+                    return result.totalTokens || null;
+                } catch (error) {
+                    showMessage('error', `Error de red al contar tokens: ${error.message}`); console.error(error); return null;
+                }
+            }
+
+            processButton.addEventListener('click', () => { 
+                if (!mainFileName || !loadedFilesData[mainFileName]) { showMessage('error', 'No hay un archivo YAML principal seleccionado.'); return; }
+                clearMessages(); 
+                if (resolvedContentDiv) resolvedContentDiv.innerHTML = 'Procesando $refs...'; 
+                currentResolvedObject = null; initializeUIState(); filesUsedInResolution.clear();
+                setTimeout(() => {
+                    try {
+                        const objectToResolve = JSON.parse(JSON.stringify(loadedFilesData[mainFileName].parsed)); 
+                        currentResolvedObject = resolveReferences(objectToResolve, mainFileName, loadedFilesData, new Set(), filesUsedInResolution);
+                        if (resolvedContentDiv) displayInteractiveResolvedYaml(currentResolvedObject, resolvedContentDiv, 0, mainFileName, 0, "root"); 
+                        
+                        showMessage('success', '¡Referencias $ref resueltas exitosamente!');
+                        generateSummaryButton.disabled = false; downloadButton.disabled = false;
+                        if (!curlValidatorTab.classList.contains('hidden')) { // If cURL tab is active, populate.
+                             populateCurlOperationSelectors();
+                        }
+                        if (filesUsedInResolution.size > 0) {
+                            usedFilesArea.classList.remove('hidden');
+                            usedFilesListContent.innerHTML = '';
+                            Array.from(filesUsedInResolution).sort().forEach(filePath => {
+                                const li = document.createElement('li'); li.textContent = filePath;
+                                usedFilesListContent.appendChild(li);
+                            });
+                        }
+                    } catch (error) {
+                        if (resolvedContentDiv) resolvedContentDiv.innerHTML = `<div class="p-2 text-red-600">Error: ${escapeHtml(error.message)}</div>`;
+                        showMessage('error', `Error al resolver $refs: ${error.message}`);
+                        console.error("Error resolving $refs:", error);
+                        currentResolvedObject = null; initializeUIState();
+                    }
+                }, 10);
+            });
+            
+            function downloadTextFile(text, filename, mimeType) { 
+                const blob = new Blob([text], { type: mimeType }); const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = filename;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+            }
+            downloadButton.addEventListener('click', () => { 
+                 if (!currentResolvedObject) { showMessage('info', 'Resuelve $refs para descargar.'); return; }
+                try {
+                    const yamlString = generateYamlStringWithComments(currentResolvedObject, 0, mainFileName);
+                    downloadTextFile(yamlString, `${mainFileName.replace(/\.ya?ml$/, '')}_resuelto_con_comentarios.yaml`, 'application/x-yaml');
+                    showMessage('success', 'Archivo YAML generado para descarga.');
+                } catch (e) { showMessage('error', `Error al generar descarga: ${e.message}`); console.error(e); }
+            });
+            function createCleanCloneForAI(obj) { 
+                if (typeof obj !== 'object' || obj === null) return obj;
+                if (Object.getOwnPropertyDescriptor(obj, RESOLVED_REF_MARKER)?.value) {
+                    return createCleanCloneForAI(Object.getOwnPropertyDescriptor(obj, 'resolvedContent').value);
+                }
+                let clone = Array.isArray(obj) ? [] : {};
+                for (const key in obj) {
+                    if (Object.prototype.hasOwnProperty.call(obj, key)) { 
+                        if (key === YAML_REF_ORIGIN_MARKER || key === RESOLVED_REF_MARKER) continue; 
+                        clone[key] = createCleanCloneForAI(obj[key]);
+                    }
+                }
+                return clone;
+            }
+
+            // Initial Setup
+            populateMainFileSelector(); 
+            showApiSummaryTabButton.click(); 
         });
-        populateMainFileSelector(); 
     </script>
 </body>
 </html>
