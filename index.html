@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resolver $ref en YAML (OP Consultor con Reportes)</title>
+    <title>Resolver $ref en YAML (Refinamientos UI/IA)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
     <style>
@@ -26,13 +26,13 @@
             min-height: 250px;
             max-height: 70vh; 
         }
-        #curlValidationOutput { /* Apply pre-wrap for better text flow */
+        #curlValidationOutput { 
             white-space: pre-wrap;
         }
-        #curlValidationOutput pre { /* Ensure pre tags inside still respect pre formatting */
+        #curlValidationOutput pre { 
             white-space: pre;
-            word-wrap: normal; /* Prevent breaking in pre */
-            overflow-x: auto; /* Allow horizontal scroll for long cURL */
+            word-wrap: normal; 
+            overflow-x: auto; 
         }
         .content-area::-webkit-scrollbar, #usedFilesListContent::-webkit-scrollbar, #curlValidationOutput::-webkit-scrollbar, #apiSummaryContent::-webkit-scrollbar {
             width: 8px;
@@ -57,7 +57,31 @@
         .message-box-info { background-color: #e0f2fe; color: #075985; border-color: #7dd3fc; }
         .message-box-warning { background-color: #fef3c7; color: #92400e; border-color: #fcd34d; }
 
-        #usedFilesListContent li { padding: 0.25rem 0.5rem; font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: monospace; }
+        #usedFilesListContent {
+            max-height: 150px; /* Increased height for used files list */
+            overflow-y: auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.375rem;
+            background-color: #f9fafb;
+        }
+        #usedFilesListContent li { 
+            padding: 0.35rem 0.6rem; /* Slightly more padding */
+            font-size: 0.8rem; 
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            font-family: monospace;
+            cursor: pointer; /* Indicate clickable */
+            border-radius: 0.25rem;
+        }
+        #usedFilesListContent li:hover {
+            background-color: #eef2ff; /* indigo-50 */
+        }
+        #usedFilesListContent li.selected {
+            background-color: #c7d2fe; /* indigo-200 */
+            font-weight: 500;
+        }
+
         #mainFileSelector, #curlOperationPath, #curlOperationMethod { max-width: 100%; }
         .spinner { border: 4px solid rgba(0, 0, 0, 0.1); width: 24px; height: 24px; border-radius: 50%; border-left-color: #09f; animation: spin 1s ease infinite; display: inline-block; margin-right: 8px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -84,15 +108,10 @@
         .modal-confirm-button:hover { background-color: #1d4ed8; }
         .modal-cancel-button { background-color: #e5e7eb; color: #374151; }
         .modal-cancel-button:hover { background-color: #d1d5db; }
+        .openapi-feedback-section { margin-top: 1rem; padding-top: 0.75rem; border-top: 1px dotted #cbd5e1;}
         
-        .report-section { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #e5e7eb; }
-        .report-section:last-child { border-bottom: none; margin-bottom: 0; }
-        .report-title { font-weight: 600; margin-bottom: 0.25rem; display: flex; align-items: center;}
-        .status-icon { width: 1em; height: 1em; border-radius: 50%; margin-right: 0.5em; display: inline-block; }
-        .status-valid { background-color: #10b981; /* green-500 */ }
-        .status-invalid { background-color: #ef4444; /* red-500 */ }
-        .status-alerts { background-color: #f59e0b; /* amber-500 */ }
-        .status-no-alerts { background-color: #86efac; /* light green for no alerts */ }
+        #usedFilesArea details > summary { cursor: pointer; font-weight: 600; padding: 0.25rem 0; }
+        #usedFilesArea details[open] > summary { margin-bottom: 0.5rem; }
 
     </style>
 </head>
@@ -116,10 +135,6 @@
                 </select>
             </div>
         </div>
-         <div class="mb-6">
-            <label for="geminiApiKeyInput" class="block mb-2 text-sm font-medium text-gray-700">3. Ingresa tu API Key para OP Consultor:</label>
-            <input type="password" id="geminiApiKeyInput" placeholder="Pega tu API Key aquí" class="block w-full p-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
-        </div>
         
         <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mb-6">
             <button id="processButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto">
@@ -137,13 +152,22 @@
             <div id="resolvedContent" class="content-area text-xs"></div> 
         </div>
         
-        <div id="originalContentArea" class="mb-6 hidden"> 
-            <h2 class="text-lg font-semibold text-gray-700 mb-2">Contenido Original (Principal)</h2>
-            <pre id="originalContent" class="content-area text-xs"></pre>
+        <div id="usedFilesArea" class="mt-2 mb-6 hidden">
+            <details>
+                <summary class="text-md font-semibold text-gray-700 hover:text-blue-600">Archivos Utilizados en la Resolución (clic para expandir)</summary>
+                <div class="flex items-center mt-2">
+                    <ul id="usedFilesListContent" class="p-2 text-sm flex-grow"></ul>
+                    <button id="viewSelectedUsedFileButton" class="ml-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-1 px-3 rounded-lg text-xs disabled:opacity-50 disabled:cursor-not-allowed">Ver Archivo</button>
+                </div>
+            </details>
         </div>
         
         <div id="opConsultorSection">
             <h2 class="text-xl font-semibold text-gray-800 mb-3 text-center">OP Consultor: Validador de cURL</h2>
+             <div class="mb-4">
+                <label for="geminiApiKeyInput" class="block mb-2 text-sm font-medium text-gray-700">API Key para OP Consultor:</label>
+                <input type="password" id="geminiApiKeyInput" placeholder="Pega tu API Key aquí" class="block w-full p-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+            </div>
             
             <div id="curlValidatorTab" class="op-consultor-tab-content" style="border-top: none; padding-top: 0;">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
@@ -169,11 +193,6 @@
                     <div id="curlValidationOutput" class="content-area text-sm p-3 bg-white rounded-md border"></div>
                 </div>
             </div>
-        </div>
-        
-        <div id="usedFilesArea" class="mt-6 hidden">
-            <h2 class="text-lg font-semibold text-gray-700 mb-2">Archivos Utilizados en la Resolución:</h2>
-            <ul id="usedFilesListContent" class="p-2 text-sm"></ul>
         </div>
         
         <div id="confirmationModal" class="modal-overlay hidden">
@@ -202,6 +221,7 @@
         const RESOLVED_REF_MARKER = '__is_resolved_ref__'; 
         let currentConfirmAction = null;
         const GEMINI_MODEL_NAME = 'gemini-1.5-flash-latest'; 
+        let selectedUsedFilePath = null;
 
 
         const blockColorClasses = ['bg-cycle-0', 'bg-cycle-1', 'bg-cycle-2', 'bg-cycle-3', 'bg-cycle-4', 'bg-cycle-5', 'bg-cycle-6', 'bg-cycle-7', 'bg-cycle-8'];
@@ -226,6 +246,7 @@
             
             const usedFilesArea = document.getElementById('usedFilesArea');
             const usedFilesListContent = document.getElementById('usedFilesListContent');
+            const viewSelectedUsedFileButton = document.getElementById('viewSelectedUsedFileButton');
             
             const curlValidatorTab = document.getElementById('curlValidatorTab'); 
             const curlOperationPath = document.getElementById('curlOperationPath');
@@ -264,7 +285,7 @@
                 confirmationModal.classList.add('hidden');
                 currentConfirmAction = null;
                 validateCurlButton.disabled = !currentResolvedObject || !curlOperationPath.value || !curlOperationMethod.value;
-                curlValidatorSpinner.classList.add('hidden');
+                if(curlValidatorSpinner) curlValidatorSpinner.classList.add('hidden');
             });
 
             function initializeUIState() {
@@ -272,12 +293,16 @@
                 validateCurlButton.disabled = true;
                 curlOperationPath.disabled = true;
                 curlOperationMethod.disabled = true;
+                viewSelectedUsedFileButton.disabled = true;
+
+                curlValidatorTab.classList.remove('hidden'); 
                 curlValidationResultArea.classList.add('hidden');
                 usedFilesArea.classList.add('hidden');
+                
                 usedFilesListContent.innerHTML = '';
                 curlValidationOutput.innerHTML = '';
                 curlCommandInput.value = '';
-                 if (curlValidatorTab) curlValidatorTab.classList.remove('hidden'); // Ensure it's visible
+                selectedUsedFilePath = null;
             }
             
             function populateMainFileSelector() {
@@ -512,7 +537,7 @@
                         if (inheritedSource && inheritedSource !== mainFileName && !parentElement.classList.contains('resolved-content-block')) lineDiv.classList.add('resolved-external-source-block');
                         parentElement.appendChild(lineDiv);
                     } else {
-                        let firstKeyProcessed = (parentElement === resolvedContentDiv); 
+                        let firstKeyProcessed = (parentElement === resolvedContentDiv && indentLevel === 0); 
                         keys.forEach(key => {
                             const value = dataToDisplay[key];
                             const keyLineDiv = document.createElement('div');
@@ -523,7 +548,7 @@
                             keyTextSpan.textContent = escapeHtml(key);
                             if (indentLevel === 0 && openApiTopLevelKeys.includes(key)) {
                                 keyLineDiv.classList.add('openapi-section-title-key');
-                                if (!firstKeyProcessed && keyLineDiv !== parentElement.firstChild) { 
+                                if (!firstKeyProcessed) { // Apply to all except the very first one at root level
                                     keyLineDiv.style.borderTop = '1px dashed #d1d5db';
                                     keyLineDiv.style.paddingTop = '0.75em';
                                     keyLineDiv.style.marginTop = '1em';
@@ -536,8 +561,8 @@
                             }
                             const valueSource = (typeof value === 'object' && value !== null) ? Object.getOwnPropertyDescriptor(value, YAML_REF_ORIGIN_MARKER)?.value : null;
                             const effectiveValueSource = valueSource || inheritedSource;
-                             if (effectiveValueSource && effectiveValueSource !== mainFileName && !parentElement.classList.contains('resolved-content-block')) { // Check if parentElement is already colored
-                                // keyLineDiv.classList.add('resolved-external-source-block'); // This was causing double backgrounds
+                            if (effectiveValueSource && effectiveValueSource !== mainFileName && !parentElement.classList.contains('resolved-content-block')) {
+                                // keyLineDiv.classList.add('resolved-external-source-block');
                             }
 
                             if (typeof value === 'object' && value !== null && Object.getOwnPropertyDescriptor(value, RESOLVED_REF_MARKER)?.value) {
@@ -636,7 +661,24 @@
                                 usedFilesArea.classList.remove('hidden');
                                 usedFilesListContent.innerHTML = '';
                                 Array.from(filesUsedInResolution).sort().forEach(filePath => {
-                                    const li = document.createElement('li'); li.textContent = filePath;
+                                    const li = document.createElement('li'); 
+                                    li.textContent = filePath;
+                                    li.dataset.filePath = filePath; // Store path for click handler
+                                    li.addEventListener('click', () => {
+                                        if (selectedUsedFilePath === filePath) { // Deselect if clicked again
+                                            li.classList.remove('selected');
+                                            selectedUsedFilePath = null;
+                                            viewSelectedUsedFileButton.disabled = true;
+                                        } else {
+                                            // Remove 'selected' from previously selected item
+                                            const currentlySelected = usedFilesListContent.querySelector('li.selected');
+                                            if (currentlySelected) currentlySelected.classList.remove('selected');
+                                            
+                                            li.classList.add('selected');
+                                            selectedUsedFilePath = filePath;
+                                            viewSelectedUsedFileButton.disabled = false;
+                                        }
+                                    });
                                     usedFilesListContent.appendChild(li);
                                 });
                             }
@@ -650,6 +692,21 @@
                 }, 10);
             });
             
+            viewSelectedUsedFileButton.addEventListener('click', () => {
+                if (selectedUsedFilePath && loadedFilesData[selectedUsedFilePath]) {
+                    const fileContent = loadedFilesData[selectedUsedFilePath].raw;
+                    const newWindow = window.open("", "_blank");
+                    if(newWindow){
+                        newWindow.document.write(`<pre>${escapeHtml(fileContent)}</pre>`);
+                        newWindow.document.close();
+                    } else {
+                        showMessage('error', 'No se pudo abrir una nueva ventana. Revisa la configuración de tu navegador (bloqueador de pop-ups).');
+                    }
+                } else {
+                    showMessage('info', 'No hay un archivo seleccionado o el archivo no se pudo cargar.');
+                }
+            });
+
             function downloadTextFile(text, filename, mimeType) { 
                 const blob = new Blob([text], { type: mimeType }); const url = URL.createObjectURL(blob);
                 const a = document.createElement('a'); a.href = url; a.download = filename;
@@ -769,7 +826,7 @@ PARTE 1: Validación del Comando cURL del Usuario
 
 PARTE 2: Análisis de la Especificación OpenAPI para la Operación
 1.  Independientemente de la validez del cURL del usuario, analiza la definición de la operación OpenAPI proporcionada.
-2.  Identifica si hay alguna alerta, ambigüedad, información faltante o inconsistencia en la propia documentación OpenAPI para esta operación que podría dificultar la creación de un comando cURL correcto o la comprensión de la operación.
+2.  Identifica si hay alguna alerta, ambigüedad, información faltante o inconsistencia en la propia documentación OpenAPI para esta operación que podría dificultar la creación de un comando cURL correcto o la comprensión de la operación. Es crucial que señales cualquier suposición que debas hacer debido a documentación incompleta o ambigua, ya que el usuario basa su comando cURL en su interpretación directa de la especificación.
 3.  Si encuentras alertas, detalla cuáles son en una explicación concisa. Si no hay alertas, indícalo.
 
 Información de la API:
@@ -846,7 +903,6 @@ Responde en formato JSON con la siguiente estructura:
                         try {
                             const validationResult = JSON.parse(jsonResponseText);
                             let outputHtml = '<div class="report-section">';
-                            // cURL Validation Report
                             const cv = validationResult.curlValidation;
                             outputHtml += `<h5 class="report-title"><span class="status-icon ${cv.isValid ? 'status-valid' : 'status-invalid'}"></span>Reporte de Fidelidad del cURL: ${cv.isValid ? 'VÁLIDO' : 'INVÁLIDO'}</h5>`;
                             outputHtml += `<p>${escapeHtml(cv.explanation).replace(/\n/g, '<br>')}</p>`;
@@ -855,29 +911,29 @@ Responde en formato JSON con la siguiente estructura:
                             }
                             outputHtml += '</div>';
 
-                            // OpenAPI Spec Feedback Report
                             const sf = validationResult.openapiSpecFeedback;
                             if (sf) {
-                                outputHtml += '<div class="report-section">';
+                                outputHtml += '<div class="report-section openapi-feedback-section">'; // Added class for potential specific styling
                                 outputHtml += `<h5 class="report-title"><span class="status-icon ${sf.hasAlerts ? 'status-alerts' : 'status-no-alerts'}"></span>Reporte de Alertas sobre Especificación OpenAPI: ${sf.hasAlerts ? 'CON ALERTAS' : 'SIN ALERTAS ESPECÍFICAS'}</h5>`;
                                 outputHtml += `<p>${escapeHtml(sf.alertsExplanation).replace(/\n/g, '<br>')}</p>`;
                                 outputHtml += '</div>';
                             }
                             
-                            // Conclusion
-                            outputHtml += '<div class="report-section" style="border-bottom: none;">';
-                            outputHtml += `<h5 class="report-title">Conclusión General:</h5>`;
+                            let conclusionText = "";
                             if (cv.isValid && sf && !sf.hasAlerts) {
-                                outputHtml += "<p>El comando cURL es fiel a la especificación y no se detectaron alertas mayores en la documentación de la operación.</p>";
+                                conclusionText = "El comando cURL es fiel a la especificación y no se detectaron alertas mayores en la documentación de la operación.";
                             } else if (cv.isValid && sf && sf.hasAlerts) {
-                                outputHtml += "<p>El comando cURL es fiel a la especificación actual, pero se han detectado algunas alertas o áreas de mejora en la documentación de la operación.</p>";
+                                conclusionText = "El comando cURL es fiel a la especificación actual, pero OP Consultor ha detectado algunas alertas o áreas de mejora en la documentación de la operación que podrían ser relevantes.";
                             } else if (!cv.isValid && sf && !sf.hasAlerts) {
-                                outputHtml += "<p>El comando cURL no es fiel a la especificación. La documentación de la operación parece adecuada, pero el comando necesita ajustes.</p>";
-                            } else { // !cv.isValid && sf && sf.hasAlerts (o sf no definido)
-                                outputHtml += "<p>El comando cURL no es fiel a la especificación, y/o se han detectado alertas en la documentación de la operación que podrían estar contribuyendo.</p>";
+                                conclusionText = "El comando cURL no es fiel a la especificación. La documentación de la operación parece adecuada para la validación, pero el comando necesita ajustes.";
+                            } else if (!cv.isValid && sf && sf.hasAlerts){ 
+                                conclusionText = "El comando cURL no es fiel a la especificación, y además, OP Consultor ha detectado alertas en la documentación de la operación que podrían estar contribuyendo a la confusión o a los errores.";
+                            } else if (!cv.isValid) { // Fallback if sf is not defined but curl is invalid
+                                conclusionText = "El comando cURL no es fiel a la especificación.";
+                            } else { // Fallback for other cases
+                                conclusionText = "Análisis completado. Revisa los reportes individuales."
                             }
-                            outputHtml += '</div>';
-
+                            outputHtml += `<div class="report-section" style="border-bottom: none; margin-top: 1rem;"><h5 class="report-title">Conclusión General:</h5><p>${conclusionText}</p></div>`;
 
                             curlValidationOutput.innerHTML = outputHtml;
                             showMessage('success', 'Análisis de OP Consultor completado.');
