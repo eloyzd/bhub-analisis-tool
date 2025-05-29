@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resolver $ref en YAML (Validador cURL Enfocado)</title>
+    <title>Resolver $ref en YAML (UI Ajustada)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
     <style>
@@ -12,7 +12,7 @@
         }
         .content-area { 
             min-height: 200px;
-            max-height: 350px; 
+            /* max-height will be applied specifically or adjusted */
             overflow-y: auto;
             white-space: pre;
             font-family: monospace;
@@ -21,14 +21,22 @@
             border-radius: 0.375rem; 
             padding: 0.75rem; 
         }
-        .content-area::-webkit-scrollbar, #usedFilesListContent::-webkit-scrollbar, #curlValidationOutput::-webkit-scrollbar {
+        #resolvedContent { /* Specific for resolved content area */
+            resize: vertical;
+            min-height: 250px;
+            max-height: 70vh; /* Allow it to grow significantly */
+        }
+        #apiSummaryContent, #curlValidationOutput { /* Other content areas */
+             max-height: 350px;
+        }
+        .content-area::-webkit-scrollbar, #usedFilesListContent::-webkit-scrollbar, #curlValidationOutput::-webkit-scrollbar, #apiSummaryContent::-webkit-scrollbar {
             width: 8px;
         }
-        .content-area::-webkit-scrollbar-track, #usedFilesListContent::-webkit-scrollbar-track, #curlValidationOutput::-webkit-scrollbar-track {
+        .content-area::-webkit-scrollbar-track, #usedFilesListContent::-webkit-scrollbar-track, #curlValidationOutput::-webkit-scrollbar-track, #apiSummaryContent::-webkit-scrollbar-track {
             background: #f1f1f1;
             border-radius: 10px;
         }
-        .content-area::-webkit-scrollbar-thumb, #usedFilesListContent::-webkit-scrollbar-thumb, #curlValidationOutput::-webkit-scrollbar-thumb {
+        .content-area::-webkit-scrollbar-thumb, #usedFilesListContent::-webkit-scrollbar-thumb, #curlValidationOutput::-webkit-scrollbar-thumb, #apiSummaryContent::-webkit-scrollbar-thumb {
             background: #888;
             border-radius: 10px;
         }
@@ -71,6 +79,7 @@
         .modal-confirm-button:hover { background-color: #1d4ed8; }
         .modal-cancel-button { background-color: #e5e7eb; color: #374151; }
         .modal-cancel-button:hover { background-color: #d1d5db; }
+        .openapi-feedback-section { margin-top: 1rem; padding-top: 0.75rem; border-top: 1px dotted #cbd5e1;}
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-4">
@@ -122,7 +131,8 @@
         <div id="opConsultorSection">
             <h2 class="text-xl font-semibold text-gray-800 mb-3 text-center">OP Consultor: Validador de cURL</h2>
             
-            <div id="curlValidatorTab" class="op-consultor-tab-content" style="border-top: none; padding-top: 0;"> <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
+            <div id="curlValidatorTab" class="op-consultor-tab-content" style="border-top: none; padding-top: 0;">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
                     <div>
                         <label for="curlOperationPath" class="block text-sm font-medium text-gray-700 mb-1">Seleccionar Path:</label>
                         <select id="curlOperationPath" class="block w-full p-2 text-sm border border-gray-300 rounded-lg bg-gray-50" disabled></select>
@@ -134,7 +144,7 @@
                 </div>
                 <div class="mb-3">
                     <label for="curlCommandInput" class="block text-sm font-medium text-gray-700 mb-1">Comando cURL a Validar:</label>
-                    <textarea id="curlCommandInput" rows="4" class="block w-full p-2 text-sm border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500" placeholder="Pega tu comando cURL aquí..."></textarea>
+                    <textarea id="curlCommandInput" rows="8" class="block w-full p-2 text-sm border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500" placeholder="Pega tu comando cURL aquí..."></textarea>
                 </div>
                 <button id="validateCurlButton" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed w-full flex items-center justify-center">
                     <span id="curlValidatorSpinner" class="spinner hidden mr-2"></span>
@@ -203,8 +213,7 @@
             const usedFilesArea = document.getElementById('usedFilesArea');
             const usedFilesListContent = document.getElementById('usedFilesListContent');
             
-            // OP Consultor Elements for cURL Validator (Summary elements removed)
-            const curlValidatorTab = document.getElementById('curlValidatorTab'); // This is now the main content of OP Consultor section
+            const curlValidatorTab = document.getElementById('curlValidatorTab'); 
             const curlOperationPath = document.getElementById('curlOperationPath');
             const curlOperationMethod = document.getElementById('curlOperationMethod');
             const curlCommandInput = document.getElementById('curlCommandInput');
@@ -241,19 +250,20 @@
                 confirmationModal.classList.add('hidden');
                 currentConfirmAction = null;
                 // Re-enable button if an action was cancelled for cURL validator
-                validateCurlButton.disabled = !currentResolvedObject || !curlOperationPath.value || !curlOperationMethod.value;
-                curlValidatorSpinner.classList.add('hidden');
+                if (validateCurlButton) validateCurlButton.disabled = !currentResolvedObject || !curlOperationPath.value || !curlOperationMethod.value;
+                if (curlValidatorSpinner) curlValidatorSpinner.classList.add('hidden');
             });
 
             function initializeUIState() {
-                // Only cURL validator related UI elements need reset now for OP Consultor
                 downloadButton.disabled = true;
                 validateCurlButton.disabled = true;
                 curlOperationPath.disabled = true;
                 curlOperationMethod.disabled = true;
+
                 curlValidatorTab.classList.remove('hidden'); // Make it visible by default
                 curlValidationResultArea.classList.add('hidden');
                 usedFilesArea.classList.add('hidden');
+                
                 usedFilesListContent.innerHTML = '';
                 curlValidationOutput.innerHTML = '';
                 curlCommandInput.value = '';
@@ -337,7 +347,7 @@
                 }
             });
 
-            function normalizePath(baseDir, relativePath) { /* ... (same as before) ... */ 
+            function normalizePath(baseDir, relativePath) { 
                 const baseParts = baseDir.split('/').filter(p => p.length > 0);
                 const relativeParts = relativePath.split('/');
                 let pathStack = [...baseParts];
@@ -351,7 +361,7 @@
                 }
                 return pathStack.join('/');
             }
-            function getPath(obj, pointer) { /* ... (same as before) ... */ 
+            function getPath(obj, pointer) { 
                 const effectivePointer = pointer.startsWith('#/') ? pointer.substring(2) : (pointer.startsWith('/') ? pointer.substring(1) : pointer);
                 if (effectivePointer === '') return obj;
                 const parts = effectivePointer.split('/');
@@ -366,13 +376,13 @@
                 }
                 return current;
             }
-            function parseRefString(refString) { /* ... (same as before) ... */ 
+            function parseRefString(refString) { 
                 const hashIndex = refString.indexOf('#');
                 if (hashIndex === -1) return { filePath: refString, pointer: '#/' };
                 if (hashIndex === 0) return { filePath: null, pointer: refString };
                 return { filePath: refString.substring(0, hashIndex), pointer: refString.substring(hashIndex) };
             }
-            function resolveReferences(currentValue, currentFileFullPath, allFilesData, visitedRefs, usedFilesSet) { /* ... (same as before, ensures RESOLVED_REF_MARKER and sourceFile/originalRefString are set on the wrapper) ... */ 
+            function resolveReferences(currentValue, currentFileFullPath, allFilesData, visitedRefs, usedFilesSet) { 
                 if (typeof currentValue !== 'object' || currentValue === null) {
                     return currentValue;
                 }
@@ -418,7 +428,7 @@
                 else if (isExternalBlock) Object.defineProperty(newObj, YAML_REF_ORIGIN_MARKER, { value: currentFileFullPath, enumerable: false });
                 return newObj;
             }
-            function displayInteractiveResolvedYaml(dataToDisplay, parentElement, indentLevel = 0, inheritedSource = null, refDepth = 0, parentKeyForContext = null) { /* ... (same as before) ... */ 
+            function displayInteractiveResolvedYaml(dataToDisplay, parentElement, indentLevel = 0, inheritedSource = null, refDepth = 0, parentKeyForContext = null) { 
                 const indentSpaces = '  '.repeat(indentLevel);
                 if (typeof dataToDisplay === 'object' && dataToDisplay !== null && Object.getOwnPropertyDescriptor(dataToDisplay, RESOLVED_REF_MARKER)?.value) {
                     const originalRef = Object.getOwnPropertyDescriptor(dataToDisplay, 'originalRefString').value;
@@ -449,7 +459,7 @@
                         lineDiv.className = 'resolved-yaml-line';
                         lineDiv.style.paddingLeft = `${indentLevel * 1.5}em`;
                         lineDiv.textContent = `[]`;
-                        if(parentIsExternal) lineDiv.classList.add('resolved-external-source-block');
+                        if(parentIsExternal && !parentElement.classList.contains('resolved-content-block')) lineDiv.classList.add('resolved-external-source-block');
                         parentElement.appendChild(lineDiv);
                     } else {
                         dataToDisplay.forEach(item => {
@@ -460,7 +470,7 @@
                                 itemWrapperDiv.className = 'resolved-yaml-line'; 
                                 itemWrapperDiv.style.paddingLeft = `${indentLevel * 1.5}em`;
                                 itemWrapperDiv.textContent = `- `; 
-                                if(parentIsExternal && !itemSource) itemWrapperDiv.classList.add('resolved-external-source-block');
+                                if(parentIsExternal && !itemSource && !parentElement.classList.contains('resolved-content-block')) itemWrapperDiv.classList.add('resolved-external-source-block');
                                 parentElement.appendChild(itemWrapperDiv);
                                 displayInteractiveResolvedYaml(item, itemWrapperDiv, 0, effectiveItemSource, refDepth, null); 
                             } else if (typeof item === 'object' && item !== null) {
@@ -468,7 +478,7 @@
                                 itemDashDiv.className = 'resolved-yaml-line';
                                 itemDashDiv.style.paddingLeft = `${indentLevel * 1.5}em`;
                                 itemDashDiv.textContent = `- `;
-                                if(parentIsExternal && !itemSource) itemDashDiv.classList.add('resolved-external-source-block');
+                                if(parentIsExternal && !itemSource && !parentElement.classList.contains('resolved-content-block')) itemDashDiv.classList.add('resolved-external-source-block');
                                 parentElement.appendChild(itemDashDiv);
                                 displayInteractiveResolvedYaml(item, parentElement, indentLevel + 1, effectiveItemSource, refDepth, null);
                             } else {
@@ -476,7 +486,7 @@
                                 itemLineDiv.className = 'resolved-yaml-line';
                                 itemLineDiv.style.paddingLeft = `${indentLevel * 1.5}em`;
                                 itemLineDiv.textContent = `- ${escapeHtml(item)}`;
-                                if(parentIsExternal && !itemSource) itemLineDiv.classList.add('resolved-external-source-block');
+                                if(parentIsExternal && !itemSource && !parentElement.classList.contains('resolved-content-block')) itemLineDiv.classList.add('resolved-external-source-block');
                                 parentElement.appendChild(itemLineDiv);
                             }
                         });
@@ -488,7 +498,7 @@
                         lineDiv.className = 'resolved-yaml-line';
                         lineDiv.style.paddingLeft = `${indentLevel * 1.5}em`;
                         lineDiv.textContent = `{}`;
-                        if (inheritedSource && inheritedSource !== mainFileName) lineDiv.classList.add('resolved-external-source-block');
+                        if (inheritedSource && inheritedSource !== mainFileName && !parentElement.classList.contains('resolved-content-block')) lineDiv.classList.add('resolved-external-source-block');
                         parentElement.appendChild(lineDiv);
                     } else {
                         let firstKeyProcessed = (parentElement === resolvedContentDiv); 
@@ -515,6 +525,10 @@
                             }
                             const valueSource = (typeof value === 'object' && value !== null) ? Object.getOwnPropertyDescriptor(value, YAML_REF_ORIGIN_MARKER)?.value : null;
                             const effectiveValueSource = valueSource || inheritedSource;
+                             if (effectiveValueSource && effectiveValueSource !== mainFileName && !parentElement.classList.contains('resolved-content-block')) {
+                                keyLineDiv.classList.add('resolved-external-source-block');
+                            }
+
                             if (typeof value === 'object' && value !== null && Object.getOwnPropertyDescriptor(value, RESOLVED_REF_MARKER)?.value) {
                                 keyLineDiv.appendChild(keyTextSpan);
                                 keyLineDiv.append(`: `); 
@@ -537,7 +551,7 @@
                     lineDiv.className = 'resolved-yaml-line';
                     lineDiv.style.paddingLeft = `${indentLevel * 1.5}em`;
                     lineDiv.textContent = `${escapeHtml(dataToDisplay)}`;
-                    if (inheritedSource && inheritedSource !== mainFileName) lineDiv.classList.add('resolved-external-source-block');
+                    if (inheritedSource && inheritedSource !== mainFileName && !parentElement.classList.contains('resolved-content-block')) lineDiv.classList.add('resolved-external-source-block');
                     parentElement.appendChild(lineDiv);
                 }
             }
@@ -603,11 +617,11 @@
                         
                         showMessage('success', '¡Referencias $ref resueltas exitosamente!');
                         // Enable cURL validator relevant buttons if spec is resolved
-                        validateCurlButton.disabled = !currentResolvedObject || !curlOperationPath.value || !curlOperationMethod.value;
-                        if(currentResolvedObject) populateCurlOperationSelectors(); // Populate selectors for cURL
+                        validateCurlButton.disabled = !currentResolvedObject; // Simpler check for now
+                        if(currentResolvedObject) populateCurlOperationSelectors(); 
 
                         downloadButton.disabled = false;
-                        if (usedFilesArea && usedFilesListContent) { // Check if elements exist
+                        if (usedFilesArea && usedFilesListContent) { 
                             if (filesUsedInResolution.size > 0) {
                                 usedFilesArea.classList.remove('hidden');
                                 usedFilesListContent.innerHTML = '';
@@ -653,9 +667,7 @@
                 }
                 return clone;
             }
-
-            // Removed handleGenerateSummary and callGeminiForSummary functions
-
+            
             function populateCurlOperationSelectors() {
                 curlOperationPath.innerHTML = '<option value="">-- Selecciona un Path --</option>';
                 curlOperationMethod.innerHTML = '<option value="">-- Selecciona un Método --</option>';
@@ -741,7 +753,7 @@ Tu tarea es la siguiente:
     * Es aceptable que el usuario utilice placeholders para los valores de los parámetros (ej. <TOKEN_AQUI>, <ID_DE_EJEMPLO>, <DATOS_JSON>). No invalides el comando solo por el uso de placeholders en los valores; enfócate en los nombres de los parámetros, su obligatoriedad y su correcta ubicación.
 4.  Determina si el comando del usuario es VÁLIDO o INVÁLIDO.
 5.  Proporciona una EXPLICACIÓN clara y concisa en español de tu validación. Si es inválido, detalla específicamente qué aspectos del comando cURL no se alinean con la especificación OpenAPI. Si es válido, confírmalo.
-6.  Si durante tu análisis de la especificación OpenAPI para esta operación encuentras ambigüedades, información faltante, o inconsistencias en la propia documentación que impiden una validación clara, menciona estos hallazgos brevemente como parte de tu explicación.
+6.  Opcionalmente, si crees que es útil, puedes generar un comando cURL "sugerido" o "corregido" que sí cumpla con la especificación.
 
 Información de la API:
 Título: ${apiInfo.title}
@@ -769,7 +781,7 @@ Comando cURL del Usuario a Validar:
 ${userCurlCommand}
 \`\`\`
 
-Responde en formato JSON con las siguientes claves: "isValid" (boolean), "explanation" (string, en español), y opcionalmente "suggestedCurl" (string, si crees que es útil).
+Responde en formato JSON con las siguientes claves: "isValid" (boolean), "explanation" (string, en español), y opcionalmente "suggestedCurl" (string).
 `;
                 const tokenCount = await countTokensWithGemini(promptForCurlValidation, userApiKey);
                 if (tokenCount === null) { validateCurlButton.disabled = false; curlValidatorSpinner.classList.add('hidden'); return; }
@@ -807,7 +819,7 @@ Responde en formato JSON con las siguientes claves: "isValid" (boolean), "explan
                             const validationResult = JSON.parse(jsonResponseText);
                             let outputHtml = `<p class="mb-2"><strong>Validación:</strong> <span class="${validationResult.isValid ? 'text-green-600' : 'text-red-600'}">${validationResult.isValid ? 'VÁLIDO' : 'INVÁLIDO'}</span></p>`;
                             outputHtml += `<p class="mb-2"><strong>Explicación de OP Consultor:</strong><br>${escapeHtml(validationResult.explanation).replace(/\n/g, '<br>')}</p>`;
-                            if (validationResult.suggestedCurl) { // Check if suggestedCurl exists
+                            if (validationResult.suggestedCurl) { 
                                 outputHtml += `<p class="mb-1"><strong>Comando cURL Sugerido por OP Consultor:</strong></p><pre class="bg-gray-100 p-2 rounded text-xs whitespace-pre-wrap break-all">${escapeHtml(validationResult.suggestedCurl)}</pre>`;
                             }
                             // Removed openapiSpecFeedback display as per new prompt focus
@@ -833,8 +845,11 @@ Responde en formato JSON con las siguientes claves: "isValid" (boolean), "explan
                     if (!response.ok) {
                         let errMsg = `Error al contar tokens: ${response.statusText}`;
                         try { const errData = await response.json(); console.error('Error API (countTokens):', errData); 
-                            if (errData.error && errData.error.message && errData.error.message.toLowerCase().includes("api key not valid")) {
+                            if (errData.error && errData.error.message && (errData.error.message.toLowerCase().includes("api key not valid") || errData.error.message.toLowerCase().includes("api key expired")) ) {
                                 errMsg = "Error al contar tokens: La API Key proporcionada no es válida o ha caducado. Por favor, verifica la clave e inténtalo de nuevo.";
+                            } else if (response.status === 429) { // Quota error
+                                errMsg = `Error al contar tokens: Has excedido tu cuota (Error 429).`;
+                                if (errData.error?.details) { const r = errData.error.details.find(d => d['@type'] === 'type.googleapis.com/google.rpc.RetryInfo'); if (r?.retryDelay) errMsg += ` Intenta en ${r.retryDelay.replace('s',' seg')}.`;}
                             } else if (errData.error?.message) {
                                errMsg = `Error al contar tokens: ${errData.error.message}`;
                             }
@@ -849,20 +864,9 @@ Responde en formato JSON con las siguientes claves: "isValid" (boolean), "explan
                 }
             }
             
+            // Initial Setup
             populateMainFileSelector(); 
-            // Default to cURL validator tab if it's the only one effectively, or keep summary as default
-            // For now, explicit click on summary will be needed if we keep both buttons.
-            // Since summary functionality is removed, this isn't an issue. Curl tab is the only one.
-            // Ensure curlValidatorTab is shown by default if it's the only IA feature.
-             if (curlValidatorTab) curlValidatorTab.classList.remove('hidden');
-             if (apiSummaryTab) apiSummaryTab.classList.add('hidden'); // Ensure summary tab is hidden
-             if (showCurlValidatorTabButton && showApiSummaryTabButton) { // If tab buttons exist
-                showCurlValidatorTabButton.classList.add('bg-teal-700', 'ring-2', 'ring-teal-300');
-                showApiSummaryTabButton.classList.remove('bg-indigo-700', 'ring-2', 'ring-indigo-300');
-             } else if (showCurlValidatorTabButton) { // If only cURL tab button might exist (e.g. if summary button was removed)
-                // No explicit styling needed if it's the only button
-             }
-
+             if (curlValidatorTab) curlValidatorTab.classList.remove('hidden'); // Show cURL validator by default
 
         });
     </script>
