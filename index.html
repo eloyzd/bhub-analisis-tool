@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resolver $ref en YAML (Refinamientos UI/IA)</title>
+    <title>Resolver $ref en YAML (Descarga Limpia y Validación cURL)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
     <style>
@@ -57,28 +57,21 @@
         .message-box-info { background-color: #e0f2fe; color: #075985; border-color: #7dd3fc; }
         .message-box-warning { background-color: #fef3c7; color: #92400e; border-color: #fcd34d; }
 
-        #usedFilesListContent {
-            max-height: 150px; /* Increased height for used files list */
-            overflow-y: auto;
-            border: 1px solid #e5e7eb;
-            border-radius: 0.375rem;
-            background-color: #f9fafb;
-        }
         #usedFilesListContent li { 
-            padding: 0.35rem 0.6rem; /* Slightly more padding */
+            padding: 0.35rem 0.6rem; 
             font-size: 0.8rem; 
             white-space: nowrap; 
             overflow: hidden; 
             text-overflow: ellipsis; 
             font-family: monospace;
-            cursor: pointer; /* Indicate clickable */
+            cursor: pointer; 
             border-radius: 0.25rem;
         }
         #usedFilesListContent li:hover {
-            background-color: #eef2ff; /* indigo-50 */
+            background-color: #eef2ff; 
         }
         #usedFilesListContent li.selected {
-            background-color: #c7d2fe; /* indigo-200 */
+            background-color: #c7d2fe; 
             font-weight: 500;
         }
 
@@ -223,7 +216,6 @@
         const GEMINI_MODEL_NAME = 'gemini-1.5-flash-latest'; 
         let selectedUsedFilePath = null;
 
-
         const blockColorClasses = ['bg-cycle-0', 'bg-cycle-1', 'bg-cycle-2', 'bg-cycle-3', 'bg-cycle-4', 'bg-cycle-5', 'bg-cycle-6', 'bg-cycle-7', 'bg-cycle-8'];
         const httpMethods = ["get", "post", "put", "delete", "patch", "options", "head", "trace"];
         const openApiTopLevelKeys = ["openapi", "info", "servers", "paths", "components", "security", "tags", "externalDocs"];
@@ -284,8 +276,8 @@
             cancelActionButton.addEventListener('click', () => {
                 confirmationModal.classList.add('hidden');
                 currentConfirmAction = null;
-                validateCurlButton.disabled = !currentResolvedObject || !curlOperationPath.value || !curlOperationMethod.value;
-                if(curlValidatorSpinner) curlValidatorSpinner.classList.add('hidden');
+                if (validateCurlButton) validateCurlButton.disabled = !currentResolvedObject || !curlOperationPath.value || !curlOperationMethod.value;
+                if (curlValidatorSpinner) curlValidatorSpinner.classList.add('hidden');
             });
 
             function initializeUIState() {
@@ -295,13 +287,13 @@
                 curlOperationMethod.disabled = true;
                 viewSelectedUsedFileButton.disabled = true;
 
-                curlValidatorTab.classList.remove('hidden'); 
-                curlValidationResultArea.classList.add('hidden');
-                usedFilesArea.classList.add('hidden');
+                if (curlValidatorTab) curlValidatorTab.classList.remove('hidden'); 
+                if (curlValidationResultArea) curlValidationResultArea.classList.add('hidden');
+                if (usedFilesArea) usedFilesArea.classList.add('hidden');
                 
-                usedFilesListContent.innerHTML = '';
-                curlValidationOutput.innerHTML = '';
-                curlCommandInput.value = '';
+                if (usedFilesListContent) usedFilesListContent.innerHTML = '';
+                if (curlValidationOutput) curlValidationOutput.innerHTML = '';
+                if (curlCommandInput) curlCommandInput.value = '';
                 selectedUsedFilePath = null;
             }
             
@@ -383,7 +375,7 @@
                 }
             });
 
-            function normalizePath(baseDir, relativePath) { /* ... (same as before) ... */ 
+            function normalizePath(baseDir, relativePath) { 
                 const baseParts = baseDir.split('/').filter(p => p.length > 0);
                 const relativeParts = relativePath.split('/');
                 let pathStack = [...baseParts];
@@ -397,7 +389,7 @@
                 }
                 return pathStack.join('/');
             }
-            function getPath(obj, pointer) { /* ... (same as before) ... */ 
+            function getPath(obj, pointer) { 
                 const effectivePointer = pointer.startsWith('#/') ? pointer.substring(2) : (pointer.startsWith('/') ? pointer.substring(1) : pointer);
                 if (effectivePointer === '') return obj;
                 const parts = effectivePointer.split('/');
@@ -412,13 +404,13 @@
                 }
                 return current;
             }
-            function parseRefString(refString) { /* ... (same as before) ... */ 
+            function parseRefString(refString) { 
                 const hashIndex = refString.indexOf('#');
                 if (hashIndex === -1) return { filePath: refString, pointer: '#/' };
                 if (hashIndex === 0) return { filePath: null, pointer: refString };
                 return { filePath: refString.substring(0, hashIndex), pointer: refString.substring(hashIndex) };
             }
-            function resolveReferences(currentValue, currentFileFullPath, allFilesData, visitedRefs, usedFilesSet) { /* ... (same as before, ensures RESOLVED_REF_MARKER and sourceFile/originalRefString are set on the wrapper) ... */ 
+            function resolveReferences(currentValue, currentFileFullPath, allFilesData, visitedRefs, usedFilesSet) { 
                 if (typeof currentValue !== 'object' || currentValue === null) {
                     return currentValue;
                 }
@@ -548,7 +540,7 @@
                             keyTextSpan.textContent = escapeHtml(key);
                             if (indentLevel === 0 && openApiTopLevelKeys.includes(key)) {
                                 keyLineDiv.classList.add('openapi-section-title-key');
-                                if (!firstKeyProcessed) { // Apply to all except the very first one at root level
+                                if (!firstKeyProcessed && keyLineDiv !== parentElement.firstChild) { 
                                     keyLineDiv.style.borderTop = '1px dashed #d1d5db';
                                     keyLineDiv.style.paddingTop = '0.75em';
                                     keyLineDiv.style.marginTop = '1em';
@@ -561,8 +553,7 @@
                             }
                             const valueSource = (typeof value === 'object' && value !== null) ? Object.getOwnPropertyDescriptor(value, YAML_REF_ORIGIN_MARKER)?.value : null;
                             const effectiveValueSource = valueSource || inheritedSource;
-                            if (effectiveValueSource && effectiveValueSource !== mainFileName && !parentElement.classList.contains('resolved-content-block')) {
-                                // keyLineDiv.classList.add('resolved-external-source-block');
+                             if (effectiveValueSource && effectiveValueSource !== mainFileName && !parentElement.classList.contains('resolved-content-block')) {
                             }
 
                             if (typeof value === 'object' && value !== null && Object.getOwnPropertyDescriptor(value, RESOLVED_REF_MARKER)?.value) {
@@ -591,51 +582,28 @@
                     parentElement.appendChild(lineDiv);
                 }
             }
-            function generateYamlStringWithComments(node, indentLevel = 0, inheritedSource = null) { 
-                let yamlString = "";
-                const indent = "  ".repeat(indentLevel);
-                if (typeof node === 'object' && node !== null && Object.getOwnPropertyDescriptor(node, RESOLVED_REF_MARKER)?.value) {
-                    const originalRef = Object.getOwnPropertyDescriptor(node, 'originalRefString').value;
-                    const resolvedContent = Object.getOwnPropertyDescriptor(node, 'resolvedContent').value;
-                    const sourceFile = Object.getOwnPropertyDescriptor(node, 'sourceFile')?.value;
-                    yamlString += `${indent}# $ref: "${originalRef}"\n`;
-                    if (sourceFile && sourceFile !== mainFileName) yamlString += `${indent}# Origen del bloque: ${sourceFile}\n`;
-                    yamlString += generateYamlStringWithComments(resolvedContent, indentLevel, sourceFile || inheritedSource); 
-                } else {
-                    const directNodeSource = (typeof node === 'object' && node !== null) ? Object.getOwnPropertyDescriptor(node, YAML_REF_ORIGIN_MARKER)?.value : null;
-                    if (directNodeSource && directNodeSource !== mainFileName && directNodeSource !== inheritedSource) yamlString += `${indent}# Origen: ${directNodeSource}\n`;
-                    const currentEffectiveSource = directNodeSource || inheritedSource;
-                    if (Array.isArray(node)) {
-                        if (node.length === 0) yamlString += `${indent}[]\n`;
-                        else node.forEach(item => {
-                            const itemYamlLines = generateYamlStringWithComments(item, indentLevel + 1, currentEffectiveSource).split('\n').filter(l => l.trim() !== "" || l === ""); 
-                            if (itemYamlLines.length > 0) {
-                                yamlString += `${indent}- ${itemYamlLines[0].trimStart()}\n`;
-                                for (let i = 1; i < itemYamlLines.length; i++) yamlString += `${indent}  ${itemYamlLines[i]}\n`; 
-                            } else if (item === null || typeof item !== 'object') yamlString += `${indent}- ${jsyaml.dump(item, {flowLevel: 0}).trimEnd()}\n`;
-                            else yamlString += `${indent}-\n`; 
-                        });
-                    } else if (typeof node === 'object' && node !== null) {
-                        const keys = Object.keys(node);
-                        if (keys.length === 0) yamlString += `${indent}{}\n`;
-                        else keys.forEach((key) => {
-                            const value = node[key];
-                            const dumpedKey = jsyaml.dump(key, {flowLevel:0}).trim(); 
-                            yamlString += `${indent}${dumpedKey}:\n`; 
-                            yamlString += generateYamlStringWithComments(value, indentLevel + 1, currentEffectiveSource);
-                        });
-                    } else { 
-                        let dumpedScalar = jsyaml.dump(node, { indent: 0, flowLevel: -1 }); 
-                        dumpedScalar = dumpedScalar.trimEnd();
-                        if (dumpedScalar.includes('\n')) { 
-                            const scalarLines = dumpedScalar.split('\n');
-                            yamlString += `${indent}${scalarLines[0]}\n`;
-                            for(let i = 1; i < scalarLines.length; i++) yamlString += `${indent}${scalarLines[i]}\n`;
-                        } else yamlString += `${indent}${dumpedScalar}\n`;
+            
+            // Function to generate YAML string WITHOUT comments for download
+            function generateCleanYamlForDownload(node) {
+                if (typeof node !== 'object' || node === null) {
+                    return node;
+                }
+                if (Object.getOwnPropertyDescriptor(node, RESOLVED_REF_MARKER)?.value) {
+                    // For download, we want the resolved content, not the wrapper
+                    return generateCleanYamlForDownload(Object.getOwnPropertyDescriptor(node, 'resolvedContent').value);
+                }
+
+                let cleanedNode = Array.isArray(node) ? [] : {};
+                for (const key in node) {
+                    if (Object.prototype.hasOwnProperty.call(node, key)) {
+                        // Skip internal markers
+                        if (key === YAML_REF_ORIGIN_MARKER || key === RESOLVED_REF_MARKER) continue;
+                        cleanedNode[key] = generateCleanYamlForDownload(node[key]);
                     }
                 }
-                return yamlString;
+                return cleanedNode;
             }
+
 
             processButton.addEventListener('click', () => {
                 if (!mainFileName || !loadedFilesData[mainFileName]) {
@@ -663,14 +631,13 @@
                                 Array.from(filesUsedInResolution).sort().forEach(filePath => {
                                     const li = document.createElement('li'); 
                                     li.textContent = filePath;
-                                    li.dataset.filePath = filePath; // Store path for click handler
+                                    li.dataset.filePath = filePath; 
                                     li.addEventListener('click', () => {
-                                        if (selectedUsedFilePath === filePath) { // Deselect if clicked again
+                                        if (selectedUsedFilePath === filePath) { 
                                             li.classList.remove('selected');
                                             selectedUsedFilePath = null;
                                             viewSelectedUsedFileButton.disabled = true;
                                         } else {
-                                            // Remove 'selected' from previously selected item
                                             const currentlySelected = usedFilesListContent.querySelector('li.selected');
                                             if (currentlySelected) currentlySelected.classList.remove('selected');
                                             
@@ -698,6 +665,7 @@
                     const newWindow = window.open("", "_blank");
                     if(newWindow){
                         newWindow.document.write(`<pre>${escapeHtml(fileContent)}</pre>`);
+                        newWindow.document.title = selectedUsedFilePath;
                         newWindow.document.close();
                     } else {
                         showMessage('error', 'No se pudo abrir una nueva ventana. Revisa la configuración de tu navegador (bloqueador de pop-ups).');
@@ -715,9 +683,10 @@
             downloadButton.addEventListener('click', () => { 
                  if (!currentResolvedObject) { showMessage('info', 'Resuelve $refs para descargar.'); return; }
                 try {
-                    const yamlString = generateYamlStringWithComments(currentResolvedObject, 0, mainFileName);
-                    downloadTextFile(yamlString, `${mainFileName.replace(/\.ya?ml$/, '')}_resuelto_con_comentarios.yaml`, 'application/x-yaml');
-                    showMessage('success', 'Archivo YAML generado para descarga.');
+                    const cleanObjectForDownload = generateCleanYamlForDownload(currentResolvedObject);
+                    const yamlString = jsyaml.dump(cleanObjectForDownload, { indent: 2, noRefs: true, sortKeys: false }); // sortKeys: false to maintain original order as much as possible
+                    downloadTextFile(yamlString, `${mainFileName.replace(/\.ya?ml$/, '')}_resuelto.yaml`, 'application/x-yaml');
+                    showMessage('success', 'Archivo YAML resuelto (limpio) generado para descarga.');
                 } catch (e) { showMessage('error', `Error al generar descarga: ${e.message}`); console.error(e); }
             });
             function createCleanCloneForAI(obj) { 
@@ -741,9 +710,11 @@
                 curlOperationMethod.disabled = true;
                 validateCurlButton.disabled = true;
 
-                if (!currentResolvedObject || !currentResolvedObject.paths) return;
+                const cleanObjectForSelectors = createCleanCloneForAI(currentResolvedObject); // Use clean object for path/method population
+                if (!cleanObjectForSelectors || !cleanObjectForSelectors.paths) return;
 
-                const paths = Object.keys(currentResolvedObject.paths);
+
+                const paths = Object.keys(cleanObjectForSelectors.paths);
                 paths.sort().forEach(path => {
                     const option = document.createElement('option');
                     option.value = path; option.textContent = path;
@@ -758,8 +729,9 @@
                 curlOperationMethod.disabled = true;
                 validateCurlButton.disabled = true;
 
-                if (selectedPath && currentResolvedObject.paths[selectedPath]) {
-                    const methods = Object.keys(currentResolvedObject.paths[selectedPath]).filter(m => httpMethods.includes(m.toLowerCase()));
+                const cleanObjectForSelectors = createCleanCloneForAI(currentResolvedObject);
+                if (selectedPath && cleanObjectForSelectors.paths[selectedPath]) {
+                    const methods = Object.keys(cleanObjectForSelectors.paths[selectedPath]).filter(m => httpMethods.includes(m.toLowerCase()));
                     if (methods.length > 0) {
                         methods.sort().forEach(method => {
                             const option = document.createElement('option');
@@ -786,17 +758,17 @@
                 if (!userCurlCommand) { showMessage('error', 'Ingresa el comando cURL a validar.'); curlCommandInput.focus(); return; }
                 if (!currentResolvedObject) { showMessage('info', 'Resuelve $refs primero.'); return; }
 
-                const operationDefinition = currentResolvedObject.paths?.[selectedPath]?.[selectedMethod];
-                if (!operationDefinition) { showMessage('error', 'Definición de operación no encontrada.'); return; }
+                const cleanSpecForAI = createCleanCloneForAI(currentResolvedObject); // Use cleaned spec for AI context
+                const operationDefinition = cleanSpecForAI.paths?.[selectedPath]?.[selectedMethod];
+                if (!operationDefinition) { showMessage('error', 'Definición de operación no encontrada en el objeto limpio.'); return; }
 
                 let relevantSchemas = {};
                 function extractSchemas(obj) { 
                     if (typeof obj !== 'object' || obj === null) return;
                     if (obj.$ref && typeof obj.$ref === 'string' && obj.$ref.startsWith('#/components/schemas/')) {
                         const schemaName = obj.$ref.substring('#/components/schemas/'.length);
-                        const cleanResolvedObj = createCleanCloneForAI(currentResolvedObject); 
-                        if (cleanResolvedObj.components?.schemas?.[schemaName] && !relevantSchemas[schemaName]) {
-                            relevantSchemas[schemaName] = cleanResolvedObj.components.schemas[schemaName];
+                        if (cleanSpecForAI.components?.schemas?.[schemaName] && !relevantSchemas[schemaName]) {
+                            relevantSchemas[schemaName] = cleanSpecForAI.components.schemas[schemaName];
                             extractSchemas(relevantSchemas[schemaName]); 
                         }
                     }
@@ -804,9 +776,9 @@
                 }
                 extractSchemas(operationDefinition); 
                 
-                const apiInfo = currentResolvedObject.info || { title: "API Desconocida", version: "N/A" };
-                const globalSecurity = currentResolvedObject.security || [];
-                const securitySchemes = currentResolvedObject.components?.securitySchemes || {};
+                const apiInfo = cleanSpecForAI.info || { title: "API Desconocida", version: "N/A" };
+                const globalSecurity = cleanSpecForAI.security || [];
+                const securitySchemes = cleanSpecForAI.components?.securitySchemes || {};
 
                 const promptForCurlValidation = `Eres OP Consultor, un validador experto de comandos cURL y analista de especificaciones OpenAPI.
 Tu tarea tiene dos partes principales:
@@ -827,7 +799,7 @@ PARTE 1: Validación del Comando cURL del Usuario
 PARTE 2: Análisis de la Especificación OpenAPI para la Operación
 1.  Independientemente de la validez del cURL del usuario, analiza la definición de la operación OpenAPI proporcionada.
 2.  Identifica si hay alguna alerta, ambigüedad, información faltante o inconsistencia en la propia documentación OpenAPI para esta operación que podría dificultar la creación de un comando cURL correcto o la comprensión de la operación. Es crucial que señales cualquier suposición que debas hacer debido a documentación incompleta o ambigua, ya que el usuario basa su comando cURL en su interpretación directa de la especificación.
-3.  Si encuentras alertas, detalla cuáles son en una explicación concisa. Si no hay alertas, indícalo.
+3.  Si encuentras alertas, detalla cuáles son en una explicación concisa. Si no hay alertas, indícalo claramente.
 
 Información de la API:
 Título: ${apiInfo.title}
@@ -864,7 +836,7 @@ Responde en formato JSON con la siguiente estructura:
   },
   "openapiSpecFeedback": {
     "hasAlerts": boolean,
-    "alertsExplanation": "string en español (si hasAlerts es true, de lo contrario puede ser un mensaje como 'No se encontraron alertas específicas en la documentación para esta operación.')"
+    "alertsExplanation": "string en español (si hasAlerts es true, de lo contrario un mensaje como 'No se encontraron alertas específicas en la documentación para esta operación.')"
   }
 }
 `;
@@ -913,7 +885,7 @@ Responde en formato JSON con la siguiente estructura:
 
                             const sf = validationResult.openapiSpecFeedback;
                             if (sf) {
-                                outputHtml += '<div class="report-section openapi-feedback-section">'; // Added class for potential specific styling
+                                outputHtml += '<div class="report-section openapi-feedback-section">';
                                 outputHtml += `<h5 class="report-title"><span class="status-icon ${sf.hasAlerts ? 'status-alerts' : 'status-no-alerts'}"></span>Reporte de Alertas sobre Especificación OpenAPI: ${sf.hasAlerts ? 'CON ALERTAS' : 'SIN ALERTAS ESPECÍFICAS'}</h5>`;
                                 outputHtml += `<p>${escapeHtml(sf.alertsExplanation).replace(/\n/g, '<br>')}</p>`;
                                 outputHtml += '</div>';
@@ -928,9 +900,9 @@ Responde en formato JSON con la siguiente estructura:
                                 conclusionText = "El comando cURL no es fiel a la especificación. La documentación de la operación parece adecuada para la validación, pero el comando necesita ajustes.";
                             } else if (!cv.isValid && sf && sf.hasAlerts){ 
                                 conclusionText = "El comando cURL no es fiel a la especificación, y además, OP Consultor ha detectado alertas en la documentación de la operación que podrían estar contribuyendo a la confusión o a los errores.";
-                            } else if (!cv.isValid) { // Fallback if sf is not defined but curl is invalid
+                            } else if (!cv.isValid) { 
                                 conclusionText = "El comando cURL no es fiel a la especificación.";
-                            } else { // Fallback for other cases
+                            } else { 
                                 conclusionText = "Análisis completado. Revisa los reportes individuales."
                             }
                             outputHtml += `<div class="report-section" style="border-bottom: none; margin-top: 1rem;"><h5 class="report-title">Conclusión General:</h5><p>${conclusionText}</p></div>`;
@@ -977,7 +949,8 @@ Responde en formato JSON con la siguiente estructura:
             }
             
             populateMainFileSelector(); 
-             if (curlValidatorTab) curlValidatorTab.classList.remove('hidden');
+            if (curlValidatorTab) curlValidatorTab.classList.remove('hidden');
+
 
         });
     </script>
