@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resolver $ref en YAML (OP Consultor Avanzado)</title>
+    <title>Resolver $ref en YAML (OP Consultor Mejorado)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
     <style>
@@ -64,7 +64,6 @@
         .openapi-method-key .key-text { font-weight: 700; }
         .method-get .key-text { color: #059669; } .method-post .key-text { color: #2563eb; } .method-put .key-text { color: #d97706; } .method-delete .key-text { color: #dc2626; } .method-patch .key-text { color: #9333ea; } .method-options .key-text { color: #52525b; } .method-head .key-text { color: #52525b; } .method-trace .key-text { color: #52525b; } 
         
-        /* Confirmation Modal Styles */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background-color: white; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; max-width: 90%; width: 400px;}
         .modal-content p { margin-bottom: 1.5rem; font-size: 0.9rem; color: #4b5563; }
@@ -73,6 +72,7 @@
         .modal-confirm-button:hover { background-color: #1d4ed8; }
         .modal-cancel-button { background-color: #e5e7eb; color: #374151; }
         .modal-cancel-button:hover { background-color: #d1d5db; }
+        .openapi-feedback-section { margin-top: 1rem; padding-top: 0.75rem; border-top: 1px dotted #cbd5e1;}
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-4">
@@ -182,14 +182,13 @@
             </div>
         </div>
 
-
         <footer class="mt-8 text-center text-xs text-gray-500">
             <p>Utilizando js-yaml y OP Consultor. La selección de carpetas funciona mejor en navegadores basados en Chromium.</p>
         </footer>
     </div>
 
     <script>
-        // Global State (can be defined outside DOMContentLoaded if not immediately using DOM elements)
+        // Global State
         let loadedFilesData = {}; 
         let mainFileName = null;    
         const TARGET_REFERENCE_FOLDER_NAME = 'reference'; 
@@ -198,21 +197,19 @@
         const YAML_REF_ORIGIN_MARKER = '__yaml_ref_origin__';
         const RESOLVED_REF_MARKER = '__is_resolved_ref__'; 
         let currentConfirmAction = null;
+        const GEMINI_MODEL_NAME = 'gemini-1.5-flash-latest'; // Definitive model
 
 
         const blockColorClasses = ['bg-cycle-0', 'bg-cycle-1', 'bg-cycle-2', 'bg-cycle-3', 'bg-cycle-4', 'bg-cycle-5', 'bg-cycle-6', 'bg-cycle-7', 'bg-cycle-8'];
         const httpMethods = ["get", "post", "put", "delete", "patch", "options", "head", "trace"];
         const openApiTopLevelKeys = ["openapi", "info", "servers", "paths", "components", "security", "tags", "externalDocs"];
 
-        // --- Utility Functions (can be defined outside DOMContentLoaded) ---
         function escapeHtml(unsafe) {
             if (typeof unsafe !== 'string') unsafe = String(unsafe);
             return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
-        // --- DOMContentLoaded to ensure all elements are available ---
         document.addEventListener('DOMContentLoaded', () => {
-            // DOM Elements
             const yamlDirectoryInput = document.getElementById('yamlDirectory');
             const mainFileSelector = document.getElementById('mainFileSelector');
             const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
@@ -249,7 +246,6 @@
             const confirmActionButton = document.getElementById('confirmActionButton');
             const cancelActionButton = document.getElementById('cancelActionButton');
 
-            // --- UI Interaction Functions ---
             function showMessage(type, text) {
                 messageArea.innerHTML = ''; 
                 const box = document.createElement('div');
@@ -332,7 +328,7 @@
                     mainFileSelector.disabled = false;
                     mainFileName = referenceFiles[0];
                     mainFileSelector.value = mainFileName;
-                    if (originalContentDiv) originalContentDiv.textContent = loadedFilesData[mainFileName]?.raw || ''; // Guard check
+                    if (originalContentDiv) originalContentDiv.textContent = loadedFilesData[mainFileName]?.raw || '';
                     processButton.disabled = false;
                     showMessage('success', `Archivos YAML cargados. Selecciona un archivo de la carpeta "${TARGET_REFERENCE_FOLDER_NAME}" para procesar.`);
                 } else {
@@ -340,7 +336,7 @@
                     option.value = ""; option.textContent = `-- No se encontraron archivos YAML en ninguna carpeta "${TARGET_REFERENCE_FOLDER_NAME}" --`;
                     mainFileSelector.appendChild(option);
                     mainFileSelector.disabled = true; mainFileName = null;
-                    if (originalContentDiv) originalContentDiv.textContent = ''; // Guard check
+                    if (originalContentDiv) originalContentDiv.textContent = '';
                     processButton.disabled = true;
                     if (Object.keys(loadedFilesData).length > 0) { 
                          showMessage('info', `Se cargaron archivos YAML, pero ninguno en una carpeta "${TARGET_REFERENCE_FOLDER_NAME}".`);
@@ -367,7 +363,7 @@
                     if (!filePath.toLowerCase().endsWith('.yaml') && !filePath.toLowerCase().endsWith('.yml')) continue; 
                     yamlFileCount++;
                     try {
-                        const fileContent = await file.text(); // Await file reading
+                        const fileContent = await file.text();
                         loadedFilesData[filePath] = { raw: fileContent, parsed: jsyaml.load(fileContent) };
                     } catch (e) { errors.push(`Error al parsear "${filePath}": ${e.message}`); }
                 }
@@ -390,7 +386,6 @@
                 }
             });
 
-            // --- $ref Resolution and Display Logic ---
             function normalizePath(baseDir, relativePath) { 
                 const baseParts = baseDir.split('/').filter(p => p.length > 0);
                 const relativeParts = relativePath.split('/');
@@ -426,7 +421,7 @@
                 if (hashIndex === 0) return { filePath: null, pointer: refString };
                 return { filePath: refString.substring(0, hashIndex), pointer: refString.substring(hashIndex) };
             }
-            function resolveReferences(currentValue, currentFileFullPath, allFilesData, visitedRefs, usedFilesSet, originalRefPathForNode = null) { 
+            function resolveReferences(currentValue, currentFileFullPath, allFilesData, visitedRefs, usedFilesSet) { 
                 if (typeof currentValue !== 'object' || currentValue === null) {
                     return currentValue;
                 }
@@ -450,7 +445,7 @@
                     visitedRefs.add(fullRefIdentifier);
                     let resolvedPart = getPath(targetDocumentParsed, refPointer); 
                     let clonedResolvedPart = JSON.parse(JSON.stringify(resolvedPart));
-                    const fullyResolvedContent = resolveReferences(clonedResolvedPart, targetFileFullPath, allFilesData, new Set(visitedRefs), usedFilesSet, refString);
+                    const fullyResolvedContent = resolveReferences(clonedResolvedPart, targetFileFullPath, allFilesData, new Set(visitedRefs), usedFilesSet);
                     const refWrapper = {};
                     Object.defineProperty(refWrapper, RESOLVED_REF_MARKER, { value: true, enumerable: false });
                     Object.defineProperty(refWrapper, 'originalRefString', { value: refString, enumerable: false });
@@ -556,7 +551,7 @@
                             keyTextSpan.textContent = escapeHtml(key);
                             if (indentLevel === 0 && openApiTopLevelKeys.includes(key)) {
                                 keyLineDiv.classList.add('openapi-section-title-key');
-                                if (!firstKeyProcessed) { 
+                                if (!firstKeyProcessed && keyLineDiv !== parentElement.firstChild) { // Avoid border on the very first element if it's a section title
                                     keyLineDiv.style.borderTop = '1px dashed #d1d5db';
                                     keyLineDiv.style.paddingTop = '0.75em';
                                     keyLineDiv.style.marginTop = '1em';
@@ -657,6 +652,9 @@
                         
                         showMessage('success', '¡Referencias $ref resueltas exitosamente!');
                         generateSummaryButton.disabled = false; downloadButton.disabled = false;
+                        if (!curlValidatorTab.classList.contains('hidden')) {
+                             populateCurlOperationSelectors();
+                        }
                         if (filesUsedInResolution.size > 0) {
                             usedFilesArea.classList.remove('hidden');
                             usedFilesListContent.innerHTML = '';
@@ -713,7 +711,7 @@
                 const yamlStringForAI = jsyaml.dump(cleanObjectForAI, { indent: 2, noRefs: true });
                 const prompt = `Eres un asistente experto en API llamado OP Consultor. Analiza la siguiente especificación OpenAPI (YAML) y proporciona un resumen conciso en español. Destaca: objetivo general, principales endpoints y su función, y modelos de datos clave. Formato Markdown. Especificación:\n\n\`\`\`yaml\n${yamlStringForAI}\n\`\`\``;
 
-                const tokenCount = await countTokensWithGemini(prompt, userApiKey, 'gemini-1.5-flash-latest');
+                const tokenCount = await countTokensWithGemini(prompt, userApiKey);
                 if (tokenCount === null) { 
                     generateSummaryButton.disabled = false; summaryButtonSpinner.classList.add('hidden'); return;
                 }
@@ -733,7 +731,7 @@
 
             async function callGeminiForSummary(prompt, apiKey) {
                 const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL_NAME}:generateContent?key=${apiKey}`;
                 try {
                     const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                     if (!response.ok) {
@@ -823,12 +821,12 @@
                 const securitySchemes = currentResolvedObject.components?.securitySchemes || {};
 
                 const promptForCurlValidation = `Eres OP Consultor, un validador experto de comandos cURL para especificaciones OpenAPI.
-Tarea:
-1. Analiza la siguiente definición de operación OpenAPI y los componentes/esquemas relevantes.
-2. Basado en esta definición, genera un comando cURL "ideal" y completo para invocar esta operación. Incluye placeholders realistas (ej. <TU_TOKEN_AQUI>, <ID_DE_EJEMPLO>, etc.) donde sea necesario. Considera parámetros de path, query, headers, y el requestBody si aplica.
-3. Compara el comando cURL proporcionado por el usuario con tu comando cURL ideal.
-4. Determina si el comando del usuario es VÁLIDO o INVÁLIDO.
-5. Proporciona una EXPLICACIÓN clara en español de tu validación. Si es inválido, explica por qué y qué podría faltar o estar incorrecto. Si es válido, confírmalo.
+Tu tarea es la siguiente:
+1.  La especificación OpenAPI proporcionada es la "verdad absoluta" o "target". Genera un comando cURL "ideal" y completo para la operación especificada, adhiriéndote estrictamente a sus definiciones (parámetros, requestBody, seguridad, etc.). Usa placeholders realistas (ej. <TU_TOKEN_AQUI>, <ID_DE_EJEMPLO>) donde sea necesario.
+2.  Compara el comando cURL proporcionado por el usuario con tu comando cURL ideal.
+3.  Determina si el comando del usuario es VÁLIDO o INVÁLIDO en base a la especificación OpenAPI.
+4.  Proporciona una EXPLICACIÓN clara en español de tu validación. Si es inválido, detalla por qué (qué falta, qué está incorrecto, etc.). Si es válido, confírmalo.
+5.  Adicionalmente, si durante tu análisis de la especificación OpenAPI para esta operación encuentras ambigüedades, información faltante, inconsistencias o posibles errores en la propia documentación (ej. un schema referenciado pero no definido, un parámetro mal especificado), detalla estos hallazgos.
 
 Información de la API:
 Título: ${apiInfo.title}
@@ -856,9 +854,9 @@ Comando cURL del Usuario a Validar:
 ${userCurlCommand}
 \`\`\`
 
-Responde en formato JSON con las siguientes claves: "isValid" (boolean), "explanation" (string, en español), "suggestedCurl" (string).
-`;
-                const tokenCount = await countTokensWithGemini(promptForCurlValidation, userApiKey, 'gemini-1.5-flash-latest');
+Responde en formato JSON con las siguientes claves: "isValid" (boolean), "explanation" (string, en español), "suggestedCurl" (string), y "openapiSpecFeedback" (string, opcional, con tus comentarios sobre la documentación OpenAPI para esta operación).`;
+
+                const tokenCount = await countTokensWithGemini(promptForCurlValidation, userApiKey);
                 if (tokenCount === null) { validateCurlButton.disabled = false; curlValidatorSpinner.classList.add('hidden'); return; }
 
                 showConfirmationModal(
@@ -880,7 +878,7 @@ Responde en formato JSON con las siguientes claves: "isValid" (boolean), "explan
                     contents: [{ role: "user", parts: [{ text: prompt }] }],
                     generationConfig: { responseMimeType: "application/json" } 
                 };
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL_NAME}:generateContent?key=${apiKey}`;
                 try {
                     const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                     if (!response.ok) { 
@@ -897,6 +895,9 @@ Responde en formato JSON con las siguientes claves: "isValid" (boolean), "explan
                             if (validationResult.suggestedCurl) {
                                 outputHtml += `<p class="mb-1"><strong>Comando cURL Sugerido por OP Consultor:</strong></p><pre class="bg-gray-100 p-2 rounded text-xs whitespace-pre-wrap break-all">${escapeHtml(validationResult.suggestedCurl)}</pre>`;
                             }
+                            if (validationResult.openapiSpecFeedback && validationResult.openapiSpecFeedback.trim() !== "") {
+                                outputHtml += `<div class="openapi-feedback-section"><p class="mb-1"><strong>Comentarios sobre la Especificación OpenAPI:</strong></p><p class="text-sm text-gray-700">${escapeHtml(validationResult.openapiSpecFeedback).replace(/\n/g, '<br>')}</p></div>`;
+                            }
                             curlValidationOutput.innerHTML = outputHtml;
                             showMessage('success', 'Validación de cURL completada por OP Consultor.');
                         } catch (e) {
@@ -911,9 +912,9 @@ Responde en formato JSON con las siguientes claves: "isValid" (boolean), "explan
                 }
             }
 
-            async function countTokensWithGemini(promptText, apiKey, model = 'gemini-1.5-flash-latest') {
+            async function countTokensWithGemini(promptText, apiKey) { // Model is now global GEMINI_MODEL_NAME
                 const payload = { contents: [{ role: "user", parts: [{ text: promptText }] }] };
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:countTokens?key=${apiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL_NAME}:countTokens?key=${apiKey}`;
                 try {
                     const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                     if (!response.ok) {
@@ -927,69 +928,7 @@ Responde en formato JSON con las siguientes claves: "isValid" (boolean), "explan
                     showMessage('error', `Error de red al contar tokens: ${error.message}`); console.error(error); return null;
                 }
             }
-
-            processButton.addEventListener('click', () => { 
-                if (!mainFileName || !loadedFilesData[mainFileName]) { showMessage('error', 'No hay un archivo YAML principal seleccionado.'); return; }
-                clearMessages(); 
-                if (resolvedContentDiv) resolvedContentDiv.innerHTML = 'Procesando $refs...'; 
-                currentResolvedObject = null; initializeUIState(); filesUsedInResolution.clear();
-                setTimeout(() => {
-                    try {
-                        const objectToResolve = JSON.parse(JSON.stringify(loadedFilesData[mainFileName].parsed)); 
-                        currentResolvedObject = resolveReferences(objectToResolve, mainFileName, loadedFilesData, new Set(), filesUsedInResolution);
-                        if (resolvedContentDiv) displayInteractiveResolvedYaml(currentResolvedObject, resolvedContentDiv, 0, mainFileName, 0, "root"); 
-                        
-                        showMessage('success', '¡Referencias $ref resueltas exitosamente!');
-                        generateSummaryButton.disabled = false; downloadButton.disabled = false;
-                        if (!curlValidatorTab.classList.contains('hidden')) { // If cURL tab is active, populate.
-                             populateCurlOperationSelectors();
-                        }
-                        if (filesUsedInResolution.size > 0) {
-                            usedFilesArea.classList.remove('hidden');
-                            usedFilesListContent.innerHTML = '';
-                            Array.from(filesUsedInResolution).sort().forEach(filePath => {
-                                const li = document.createElement('li'); li.textContent = filePath;
-                                usedFilesListContent.appendChild(li);
-                            });
-                        }
-                    } catch (error) {
-                        if (resolvedContentDiv) resolvedContentDiv.innerHTML = `<div class="p-2 text-red-600">Error: ${escapeHtml(error.message)}</div>`;
-                        showMessage('error', `Error al resolver $refs: ${error.message}`);
-                        console.error("Error resolving $refs:", error);
-                        currentResolvedObject = null; initializeUIState();
-                    }
-                }, 10);
-            });
             
-            function downloadTextFile(text, filename, mimeType) { 
-                const blob = new Blob([text], { type: mimeType }); const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = filename;
-                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-            }
-            downloadButton.addEventListener('click', () => { 
-                 if (!currentResolvedObject) { showMessage('info', 'Resuelve $refs para descargar.'); return; }
-                try {
-                    const yamlString = generateYamlStringWithComments(currentResolvedObject, 0, mainFileName);
-                    downloadTextFile(yamlString, `${mainFileName.replace(/\.ya?ml$/, '')}_resuelto_con_comentarios.yaml`, 'application/x-yaml');
-                    showMessage('success', 'Archivo YAML generado para descarga.');
-                } catch (e) { showMessage('error', `Error al generar descarga: ${e.message}`); console.error(e); }
-            });
-            function createCleanCloneForAI(obj) { 
-                if (typeof obj !== 'object' || obj === null) return obj;
-                if (Object.getOwnPropertyDescriptor(obj, RESOLVED_REF_MARKER)?.value) {
-                    return createCleanCloneForAI(Object.getOwnPropertyDescriptor(obj, 'resolvedContent').value);
-                }
-                let clone = Array.isArray(obj) ? [] : {};
-                for (const key in obj) {
-                    if (Object.prototype.hasOwnProperty.call(obj, key)) { 
-                        if (key === YAML_REF_ORIGIN_MARKER || key === RESOLVED_REF_MARKER) continue; 
-                        clone[key] = createCleanCloneForAI(obj[key]);
-                    }
-                }
-                return clone;
-            }
-
-            // Initial Setup
             populateMainFileSelector(); 
             showApiSummaryTabButton.click(); 
         });
