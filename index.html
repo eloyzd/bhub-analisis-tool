@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resolver $ref en YAML (Descarga Limpia y Validación cURL)</title>
+    <title>Resolver $ref en YAML (Estética Mejorada)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
-    <style>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script> <style>
         body {
             font-family: 'Inter', sans-serif;
+            background-color: #f4f7f6; /* Un gris muy claro, similar a openpass.la */
         }
         .content-area { 
             min-height: 200px;
@@ -16,7 +17,7 @@
             overflow-y: auto;
             white-space: pre;
             font-family: monospace;
-            background-color: #f9fafb; 
+            background-color: #ffffff; /* Fondo blanco para áreas de contenido */
             border: 1px solid #e5e7eb; 
             border-radius: 0.375rem; 
             padding: 0.75rem; 
@@ -25,15 +26,48 @@
             resize: vertical;
             min-height: 250px;
             max-height: 70vh; 
+            background-color: #f9fafb; /* Gris más claro para el YAML resuelto */
         }
         #curlValidationOutput { 
-            white-space: pre-wrap;
+            white-space: normal; /* Allow wrapping for prose */
+            font-family: 'Inter', sans-serif; /* Use body font for readability */
+            font-size: 0.875rem;
+            line-height: 1.6;
         }
         #curlValidationOutput pre { 
             white-space: pre;
             word-wrap: normal; 
             overflow-x: auto; 
+            background-color: #f3f4f6; /* gray-100 for code blocks */
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
         }
+        /* Markdown generated content styling */
+        #curlValidationOutput h1, #curlValidationOutput h2, #curlValidationOutput h3, #curlValidationOutput h4, #curlValidationOutput h5 {
+            font-weight: 600;
+            margin-top: 0.75em;
+            margin-bottom: 0.25em;
+        }
+        #curlValidationOutput h1 { font-size: 1.5em; }
+        #curlValidationOutput h2 { font-size: 1.25em; }
+        #curlValidationOutput h3 { font-size: 1.1em; }
+        #curlValidationOutput ul, #curlValidationOutput ol {
+            margin-left: 1.5em;
+            margin-bottom: 0.5em;
+        }
+        #curlValidationOutput li { list-style-type: disc; margin-bottom: 0.2em;}
+        #curlValidationOutput ol li { list-style-type: decimal; }
+        #curlValidationOutput p { margin-bottom: 0.5em; }
+        #curlValidationOutput code { 
+            background-color: #e5e7eb; /* gray-200 */
+            padding: 0.1em 0.3em;
+            border-radius: 0.2em;
+            font-family: monospace;
+        }
+
+
         .content-area::-webkit-scrollbar, #usedFilesListContent::-webkit-scrollbar, #curlValidationOutput::-webkit-scrollbar, #apiSummaryContent::-webkit-scrollbar {
             width: 8px;
         }
@@ -76,19 +110,35 @@
         }
 
         #mainFileSelector, #curlOperationPath, #curlOperationMethod { max-width: 100%; }
-        .spinner { border: 4px solid rgba(0, 0, 0, 0.1); width: 24px; height: 24px; border-radius: 50%; border-left-color: #09f; animation: spin 1s ease infinite; display: inline-block; margin-right: 8px; }
+        .spinner { border: 4px solid rgba(0, 0, 0, 0.1); width: 24px; height: 24px; border-radius: 50%; border-left-color: #00aeef; animation: spin 1s ease infinite; display: inline-block; margin-right: 8px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        #opConsultorSection { border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1rem; margin-top: 1.5rem; }
+        #opConsultorSection { 
+            border: 1px solid #e0e0e0; /* Lighter border */
+            border-radius: 0.75rem; /* More rounded */
+            padding: 1.5rem; 
+            margin-top: 2rem; 
+            background-color: #f8fafc; /* Tailwind slate-50 for "premium" feel */
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); /* Softer shadow */
+        }
         
         .resolved-yaml-line { padding: 1px 0; display: block; white-space: pre; }
-        .source-annotation-line { color: #6b7280; font-size: 0.8em; font-style: italic; display: block; white-space: pre; padding: 1px 0; margin-top: 2px; margin-bottom: 2px; }
-        .ref-original-line { color: #1d4ed8; font-weight: 500; }
-        .bg-cycle-0 { background-color: #eff6ff; } .bg-cycle-1 { background-color: #f0fdf4; } .bg-cycle-2 { background-color: #fef9c3; } .bg-cycle-3 { background-color: #fce7f3; } .bg-cycle-4 { background-color: #f5f3ff; } .bg-cycle-5 { background-color: #fff7ed; } .bg-cycle-6 { background-color: #ecfeff; } .bg-cycle-7 { background-color: #f7fee7; } .bg-cycle-8 { background-color: #eef2ff; }
+        .source-annotation-line { color: #4b5563; font-size: 0.8em; font-style: italic; display: block; white-space: pre; padding: 1px 0; margin-top: 2px; margin-bottom: 2px; }
+        .ref-original-line { color: #007bac; font-weight: 500; } /* Darker blue for refs */
+        .bg-cycle-0 { background-color: #e0f2fe; } /* sky-100 */
+        .bg-cycle-1 { background-color: #f0fdf4; } /* green-50 */
+        .bg-cycle-2 { background-color: #fefce8; } /* yellow-50 */
+        .bg-cycle-3 { background-color: #fdf2f8; } /* pink-50 */
+        .bg-cycle-4 { background-color: #f5f3ff; } /* purple-50 */
+        .bg-cycle-5 { background-color: #fff7ed; } /* orange-50 */
+        .bg-cycle-6 { background-color: #ecfeff; } /* cyan-50 */
+        .bg-cycle-7 { background-color: #f7fee7; } /* lime-50 */
+        .bg-cycle-8 { background-color: #f0f9ff; } /* sky-50 (alternative to indigo) */
+
         .openapi-section-title-key .key-text { font-weight: 600; color: #1f2937; }
         .openapi-section-title-key { margin-top: 1em; padding-top: 0.75em; border-top: 1px dashed #d1d5db; }
         .openapi-section-title-key:first-child { margin-top: 0; padding-top: 0; border-top: none; }
-        .openapi-path-key .key-text { font-weight: 600; color: #1e40af; }
+        .openapi-path-key .key-text { font-weight: 600; color: #007bac; }
         .openapi-path-key { margin-top: 0.5em; }
         .openapi-method-key .key-text { font-weight: 700; }
         .method-get .key-text { color: #059669; } .method-post .key-text { color: #2563eb; } .method-put .key-text { color: #d97706; } .method-delete .key-text { color: #dc2626; } .method-patch .key-text { color: #9333ea; } .method-options .key-text { color: #52525b; } .method-head .key-text { color: #52525b; } .method-trace .key-text { color: #52525b; } 
@@ -97,10 +147,34 @@
         .modal-content { background-color: white; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; max-width: 90%; width: 400px;}
         .modal-content p { margin-bottom: 1.5rem; font-size: 0.9rem; color: #4b5563; }
         .modal-buttons button { padding: 0.5rem 1rem; margin: 0 0.5rem; border-radius: 0.375rem; font-weight: 500; cursor: pointer; transition: background-color 0.2s; }
-        .modal-confirm-button { background-color: #2563eb; color: white; }
-        .modal-confirm-button:hover { background-color: #1d4ed8; }
+        
+        /* OpenPass Inspired Button Style */
+        .btn-primary {
+            background-color: #00aeef; /* OpenPass Blue */
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #0095cc; /* Darker blue for hover */
+        }
+        .btn-secondary {
+            background-color: #4ade80; /* Tailwind green-400 for download */
+            color: white;
+        }
+        .btn-secondary:hover {
+            background-color: #22c55e; /* Tailwind green-500 */
+        }
+        .btn-ai { /* Specific for AI action button */
+            background-color: #00aeef; /* OpenPass Blue */
+            color: white;
+        }
+        .btn-ai:hover {
+            background-color: #0095cc;
+        }
+        .modal-confirm-button { background-color: #00aeef; color: white; }
+        .modal-confirm-button:hover { background-color: #0095cc; }
         .modal-cancel-button { background-color: #e5e7eb; color: #374151; }
         .modal-cancel-button:hover { background-color: #d1d5db; }
+
         .openapi-feedback-section { margin-top: 1rem; padding-top: 0.75rem; border-top: 1px dotted #cbd5e1;}
         
         #usedFilesArea details > summary { cursor: pointer; font-weight: 600; padding: 0.25rem 0; }
@@ -130,10 +204,10 @@
         </div>
         
         <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mb-6">
-            <button id="processButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto">
+            <button id="processButton" class="btn-primary font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto">
                 Resolver $refs
             </button>
-            <button id="downloadButton" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto">
+            <button id="downloadButton" class="btn-secondary font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto">
                 Descargar YAML Resuelto
             </button>
         </div>
@@ -156,8 +230,8 @@
         </div>
         
         <div id="opConsultorSection">
-            <h2 class="text-xl font-semibold text-gray-800 mb-3 text-center">OP Consultor: Validador de cURL</h2>
-             <div class="mb-4">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4 text-center">OP Consultor: Validador de cURL</h2>
+             <div class="mb-6">
                 <label for="geminiApiKeyInput" class="block mb-2 text-sm font-medium text-gray-700">API Key para OP Consultor:</label>
                 <input type="password" id="geminiApiKeyInput" placeholder="Pega tu API Key aquí" class="block w-full p-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
             </div>
@@ -177,9 +251,9 @@
                     <label for="curlCommandInput" class="block text-sm font-medium text-gray-700 mb-1">Comando cURL a Validar:</label>
                     <textarea id="curlCommandInput" rows="8" class="block w-full p-2 text-sm border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500" placeholder="Pega tu comando cURL aquí..."></textarea>
                 </div>
-                <button id="validateCurlButton" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed w-full flex items-center justify-center">
+                <button id="validateCurlButton" class="btn-ai font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed w-full flex items-center justify-center">
                     <span id="curlValidatorSpinner" class="spinner hidden mr-2"></span>
-                    Validar cURL con OP Consultor
+                    ✨ Validar cURL con OP Consultor
                 </button>
                 <div id="curlValidationResultArea" class="mt-4 hidden">
                     <h4 class="text-md font-semibold text-gray-700 mb-2">Análisis de OP Consultor:</h4>
@@ -375,7 +449,7 @@
                 }
             });
 
-            function normalizePath(baseDir, relativePath) { 
+            function normalizePath(baseDir, relativePath) { /* ... (same as before) ... */ 
                 const baseParts = baseDir.split('/').filter(p => p.length > 0);
                 const relativeParts = relativePath.split('/');
                 let pathStack = [...baseParts];
@@ -389,7 +463,7 @@
                 }
                 return pathStack.join('/');
             }
-            function getPath(obj, pointer) { 
+            function getPath(obj, pointer) { /* ... (same as before) ... */ 
                 const effectivePointer = pointer.startsWith('#/') ? pointer.substring(2) : (pointer.startsWith('/') ? pointer.substring(1) : pointer);
                 if (effectivePointer === '') return obj;
                 const parts = effectivePointer.split('/');
@@ -404,13 +478,13 @@
                 }
                 return current;
             }
-            function parseRefString(refString) { 
+            function parseRefString(refString) { /* ... (same as before) ... */ 
                 const hashIndex = refString.indexOf('#');
                 if (hashIndex === -1) return { filePath: refString, pointer: '#/' };
                 if (hashIndex === 0) return { filePath: null, pointer: refString };
                 return { filePath: refString.substring(0, hashIndex), pointer: refString.substring(hashIndex) };
             }
-            function resolveReferences(currentValue, currentFileFullPath, allFilesData, visitedRefs, usedFilesSet) { 
+            function resolveReferences(currentValue, currentFileFullPath, allFilesData, visitedRefs, usedFilesSet) { /* ... (same as before, ensures RESOLVED_REF_MARKER and sourceFile/originalRefString are set on the wrapper) ... */ 
                 if (typeof currentValue !== 'object' || currentValue === null) {
                     return currentValue;
                 }
@@ -583,27 +657,23 @@
                 }
             }
             
-            // Function to generate YAML string WITHOUT comments for download
             function generateCleanYamlForDownload(node) {
                 if (typeof node !== 'object' || node === null) {
                     return node;
                 }
                 if (Object.getOwnPropertyDescriptor(node, RESOLVED_REF_MARKER)?.value) {
-                    // For download, we want the resolved content, not the wrapper
                     return generateCleanYamlForDownload(Object.getOwnPropertyDescriptor(node, 'resolvedContent').value);
                 }
 
                 let cleanedNode = Array.isArray(node) ? [] : {};
                 for (const key in node) {
                     if (Object.prototype.hasOwnProperty.call(node, key)) {
-                        // Skip internal markers
                         if (key === YAML_REF_ORIGIN_MARKER || key === RESOLVED_REF_MARKER) continue;
                         cleanedNode[key] = generateCleanYamlForDownload(node[key]);
                     }
                 }
                 return cleanedNode;
             }
-
 
             processButton.addEventListener('click', () => {
                 if (!mainFileName || !loadedFilesData[mainFileName]) {
@@ -664,9 +734,11 @@
                     const fileContent = loadedFilesData[selectedUsedFilePath].raw;
                     const newWindow = window.open("", "_blank");
                     if(newWindow){
-                        newWindow.document.write(`<pre>${escapeHtml(fileContent)}</pre>`);
-                        newWindow.document.title = selectedUsedFilePath;
-                        newWindow.document.close();
+                        newWindow.document.title = selectedUsedFilePath; // Set title of new window
+                        const pre = newWindow.document.createElement('pre');
+                        pre.textContent = fileContent;
+                        newWindow.document.body.appendChild(pre);
+                        newWindow.document.close(); // Not strictly necessary for text content, but good practice
                     } else {
                         showMessage('error', 'No se pudo abrir una nueva ventana. Revisa la configuración de tu navegador (bloqueador de pop-ups).');
                     }
@@ -684,7 +756,11 @@
                  if (!currentResolvedObject) { showMessage('info', 'Resuelve $refs para descargar.'); return; }
                 try {
                     const cleanObjectForDownload = generateCleanYamlForDownload(currentResolvedObject);
-                    const yamlString = jsyaml.dump(cleanObjectForDownload, { indent: 2, noRefs: true, sortKeys: false }); // sortKeys: false to maintain original order as much as possible
+                    const yamlString = jsyaml.dump(cleanObjectForDownload, { 
+                        indent: 2, 
+                        noRefs: true, 
+                        sortKeys: false // Attempt to maintain original key order as much as possible
+                    });
                     downloadTextFile(yamlString, `${mainFileName.replace(/\.ya?ml$/, '')}_resuelto.yaml`, 'application/x-yaml');
                     showMessage('success', 'Archivo YAML resuelto (limpio) generado para descarga.');
                 } catch (e) { showMessage('error', `Error al generar descarga: ${e.message}`); console.error(e); }
@@ -710,7 +786,7 @@
                 curlOperationMethod.disabled = true;
                 validateCurlButton.disabled = true;
 
-                const cleanObjectForSelectors = createCleanCloneForAI(currentResolvedObject); // Use clean object for path/method population
+                const cleanObjectForSelectors = createCleanCloneForAI(currentResolvedObject); 
                 if (!cleanObjectForSelectors || !cleanObjectForSelectors.paths) return;
 
 
@@ -758,9 +834,9 @@
                 if (!userCurlCommand) { showMessage('error', 'Ingresa el comando cURL a validar.'); curlCommandInput.focus(); return; }
                 if (!currentResolvedObject) { showMessage('info', 'Resuelve $refs primero.'); return; }
 
-                const cleanSpecForAI = createCleanCloneForAI(currentResolvedObject); // Use cleaned spec for AI context
+                const cleanSpecForAI = createCleanCloneForAI(currentResolvedObject); 
                 const operationDefinition = cleanSpecForAI.paths?.[selectedPath]?.[selectedMethod];
-                if (!operationDefinition) { showMessage('error', 'Definición de operación no encontrada en el objeto limpio.'); return; }
+                if (!operationDefinition) { showMessage('error', 'Definición de operación no encontrada.'); return; }
 
                 let relevantSchemas = {};
                 function extractSchemas(obj) { 
@@ -877,17 +953,18 @@ Responde en formato JSON con la siguiente estructura:
                             let outputHtml = '<div class="report-section">';
                             const cv = validationResult.curlValidation;
                             outputHtml += `<h5 class="report-title"><span class="status-icon ${cv.isValid ? 'status-valid' : 'status-invalid'}"></span>Reporte de Fidelidad del cURL: ${cv.isValid ? 'VÁLIDO' : 'INVÁLIDO'}</h5>`;
-                            outputHtml += `<p>${escapeHtml(cv.explanation).replace(/\n/g, '<br>')}</p>`;
+                            outputHtml += `<div class="prose prose-sm max-w-none">${marked.parse(cv.explanation || "")}</div>`; // Render explanation as Markdown
+                            
                             if (cv.suggestedCurl) {
-                                outputHtml += `<p class="mt-2 mb-1"><strong>Comando cURL Sugerido:</strong></p><pre class="bg-gray-100 p-2 rounded text-xs whitespace-pre break-all">${escapeHtml(cv.suggestedCurl)}</pre>`;
+                                outputHtml += `<p class="mt-3 mb-1"><strong>Comando cURL Sugerido:</strong></p><pre>${escapeHtml(cv.suggestedCurl)}</pre>`;
                             }
                             outputHtml += '</div>';
 
                             const sf = validationResult.openapiSpecFeedback;
                             if (sf) {
                                 outputHtml += '<div class="report-section openapi-feedback-section">';
-                                outputHtml += `<h5 class="report-title"><span class="status-icon ${sf.hasAlerts ? 'status-alerts' : 'status-no-alerts'}"></span>Reporte de Alertas sobre Especificación OpenAPI: ${sf.hasAlerts ? 'CON ALERTAS' : 'SIN ALERTAS ESPECÍFICAS'}</h5>`;
-                                outputHtml += `<p>${escapeHtml(sf.alertsExplanation).replace(/\n/g, '<br>')}</p>`;
+                                outputHtml += `<h5 class="report-title"><span class="status-icon ${sf.hasAlerts ? 'status-alerts' : 'status-no-alerts'}"></span>Reporte sobre Especificación OpenAPI: ${sf.hasAlerts ? 'CON ALERTAS' : 'SIN ALERTAS ESPECÍFICAS'}</h5>`;
+                                outputHtml += `<div class="prose prose-sm max-w-none">${marked.parse(sf.alertsExplanation || "")}</div>`; // Render feedback as Markdown
                                 outputHtml += '</div>';
                             }
                             
@@ -905,7 +982,7 @@ Responde en formato JSON con la siguiente estructura:
                             } else { 
                                 conclusionText = "Análisis completado. Revisa los reportes individuales."
                             }
-                            outputHtml += `<div class="report-section" style="border-bottom: none; margin-top: 1rem;"><h5 class="report-title">Conclusión General:</h5><p>${conclusionText}</p></div>`;
+                            outputHtml += `<div class="report-section" style="border-bottom: none; margin-top: 1rem;"><h5 class="report-title">Conclusión General:</h5><p>${escapeHtml(conclusionText)}</p></div>`;
 
                             curlValidationOutput.innerHTML = outputHtml;
                             showMessage('success', 'Análisis de OP Consultor completado.');
@@ -948,8 +1025,9 @@ Responde en formato JSON con la siguiente estructura:
                 }
             }
             
+            // Initial Setup
             populateMainFileSelector(); 
-            if (curlValidatorTab) curlValidatorTab.classList.remove('hidden');
+            if (curlValidatorTab) curlValidatorTab.classList.remove('hidden'); // Show cURL validator by default as it's the only AI feature now
 
 
         });
